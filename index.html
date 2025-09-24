@@ -168,18 +168,19 @@
         }
 
         .game-interface {
-            height: 100vh; /* Karta hráče přes celou obrazovku */
+            height: 100vh;
             background: var(--surface);
             padding: 16px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between; /* Klíčové pro layout */
+            justify-content: space-between;
             text-align: center;
         }
 
         .player-info {
             padding-top: 2vh;
             font-size: 24px;
+            padding-bottom: 24px;
         }
 
         .player-name {
@@ -200,7 +201,7 @@
 
         .player-name .rank {
             font-weight: 600;
-            font-size: 28px; /* Zvětšený font */
+            font-size: 28px;
             color: var(--muted);
             margin-left: 8px;
         }
@@ -221,7 +222,7 @@
             min-width: 160px;
             text-align: center;
             box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.03);
-            cursor: pointer; /* Přidán cursor */
+            cursor: pointer;
         }
 
         .temp-score {
@@ -263,8 +264,7 @@
             grid-column: 2;
             grid-row: 1;
         }
-        
-        /* Prohozeno Zpět a Konec */
+
         .action-buttons-3col #undoBtn {
             grid-column: 3;
             grid-row: 1;
@@ -274,11 +274,11 @@
             grid-column: 1;
             grid-row: 1;
         }
-        
+
         .full-width-btn {
             width: 100%;
-            padding: 16px;
-            font-size: 18px;
+            padding: 24px;
+            font-size: 22px;
             font-weight: 700;
             border: 0;
             border-radius: 12px;
@@ -316,14 +316,14 @@
             display: flex;
             gap: 0;
             width: 100%;
-            margin-top: 12px; /* Posunuto dolů */
+            margin-top: 12px;
         }
 
         .btn-nav {
             flex: 1;
-            padding: 18px;
+            padding: 24px;
             border-radius: 12px;
-            font-size: 18px;
+            font-size: 22px;
             font-weight: 700;
             border: 0;
             cursor: pointer;
@@ -344,7 +344,7 @@
 
         /* Žebříček */
         .player-standings {
-            height: 100vh; /* Žebříček přes celou obrazovku */
+            height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -370,8 +370,13 @@
         }
 
         .standings-row.current-player-row {
-            background-color: #dbeafe;
+            background-color: #dbeafe; /* Modrá */
             font-weight: 700;
+        }
+
+        .standings-row.player-scored-row {
+            background-color: #dcfce7; /* Zelená */
+            font-weight: 600;
         }
 
         .standings-info {
@@ -380,6 +385,16 @@
 
         .standings-score {
             font-size: 20px;
+            font-weight: 700;
+        }
+
+        .standings-info .gold-text {
+            color: var(--winner-gold);
+            font-weight: 700;
+        }
+
+        .standings-info .danger-text {
+            color: var(--danger);
             font-weight: 700;
         }
 
@@ -555,6 +570,7 @@
     let currentIndex = 0;
     let finalRoundActive = false;
     let finalStarterIndex = null;
+    let turnScores = [];
 
     // --- Logika pro historii (aktualizovaná pro API) ---
     async function saveHistory(item) {
@@ -643,7 +659,8 @@
             currentIndex,
             target: Number(targetScoreInput.value || 4000),
             finalRoundActive,
-            finalStarterIndex
+            finalStarterIndex,
+            turnScores
         };
         localStorage.setItem(GAME_KEY, JSON.stringify(payload));
     }
@@ -653,7 +670,6 @@
         if (!raw) return null;
         try {
             const data = JSON.parse(raw);
-            // Oprava: Zajistit, že hráči mají potřebné vlastnosti pro novou hru
             data.players = data.players.map(p => ({...p, temp: 0, tempHistory: []}));
             return data;
         } catch (e) {
@@ -763,7 +779,6 @@
             alert('Přidej alespoň 2 hráče.');
             return;
         }
-        // Oprava: resetování stavu hráčů pro novou hru
         players.forEach(p => {
             p.score = 0;
             p.temp = 0;
@@ -773,7 +788,8 @@
         currentIndex = 0;
         finalRoundActive = false;
         finalStarterIndex = null;
-        localStorage.removeItem(GAME_KEY); // Smazat starou hru
+        turnScores = players.map(p => null);
+        localStorage.removeItem(GAME_KEY);
         showGame();
     });
 
@@ -833,15 +849,29 @@
         standingsListEl.innerHTML = '';
         if (players.length === 0) return;
         const sortedPlayers = players.map((p, index) => ({...p, originalIndex: index})).sort((a, b) => b.score - a.score);
+        const maxScore = sortedPlayers[0].score;
+        const minScore = sortedPlayers[sortedPlayers.length - 1].score;
         sortedPlayers.forEach((p, rank) => {
             const row = document.createElement('div');
             row.className = 'standings-row';
+            row.classList.remove('current-player-row', 'player-scored-row');
             if (p.originalIndex === currentIndex) {
                 row.classList.add('current-player-row');
+            } else if (turnScores[p.originalIndex] !== null) {
+                row.classList.add('player-scored-row');
             }
             const info = document.createElement('div');
             info.className = 'standings-info';
-            info.textContent = `#${rank + 1} ${p.name}`;
+            let rankHtml = `#${rank + 1} `;
+            let nameHtml = escapeHtml(p.name);
+            if (p.score === maxScore && players.filter(pl => pl.score === maxScore).length === 1) {
+                rankHtml = `<span class="gold-text">${rankHtml}</span>`;
+                nameHtml = `<span class="gold-text">${nameHtml}</span>`;
+            } else if (p.score === minScore && players.filter(pl => pl.score === minScore).length === 1 && maxScore !== minScore) {
+                rankHtml = `<span class="danger-text">${rankHtml}</span>`;
+                nameHtml = `<span class="danger-text">${nameHtml}</span>`;
+            }
+            info.innerHTML = rankHtml + nameHtml;
             const score = document.createElement('div');
             score.className = 'standings-score';
             score.textContent = p.score;
@@ -851,7 +881,6 @@
         });
     }
 
-    // Nová funkce pro úpravu hlavního skóre
     mainScoreEl.addEventListener('click', () => {
       const p = players[currentIndex];
       const newScore = prompt(`Zadejte nové skóre pro ${p.name}:`, p.score);
@@ -897,6 +926,7 @@
         const p = players[currentIndex];
         const delta = p.temp || 0;
         p.score += delta;
+        turnScores[currentIndex] = p.score;
         p.temp = 0;
         p.tempHistory = [];
         mainScoreEl.animate([{transform: 'scale(1)'}, {transform: 'scale(1.08)'}, {transform: 'scale(1)'}], {
@@ -907,7 +937,6 @@
         renderStandings();
         setTimeout(() => {
             const target = Number(targetScoreInput.value) || 4000;
-
             if (p.score >= target && !finalRoundActive) {
                 finalRoundActive = true;
                 finalStarterIndex = currentIndex;
@@ -919,25 +948,39 @@
                     return;
                 }
             }
-
-            currentIndex = (currentIndex + 1) % players.length;
+            let nextIndex = (currentIndex + 1) % players.length;
+            let fullRound = true;
+            for (let i = 0; i < players.length; i++) {
+                if (turnScores[i] === null) {
+                    fullRound = false;
+                    break;
+                }
+            }
+            if (fullRound) {
+                turnScores = players.map(p => null);
+                nextIndex = (currentIndex + 1) % players.length;
+            }
+            currentIndex = nextIndex;
             renderPlayerCard();
             renderStandings();
             saveOngoing();
             applyBtn.disabled = false;
-        }, 800); // Zkrácený čas
+        }, 300);
     });
 
     endBtn.addEventListener('click', endGameByStandings);
 
     prevBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex - 1 + players.length) % players.length;
+        let prevIndex = (currentIndex - 1 + players.length) % players.length;
+        currentIndex = prevIndex;
         renderPlayerCard();
         renderStandings();
         saveOngoing();
     });
+
     nextBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex + 1) % players.length;
+        let nextIndex = (currentIndex + 1) % players.length;
+        currentIndex = nextIndex;
         renderPlayerCard();
         renderStandings();
         saveOngoing();
@@ -954,6 +997,7 @@
         localStorage.removeItem(GAME_KEY);
         finalRoundActive = false;
         finalStarterIndex = null;
+        turnScores = [];
         showEndModal(standings);
     }
 
@@ -999,6 +1043,7 @@
             p.tempHistory = [];
         });
         currentIndex = 0;
+        turnScores = [];
         renderPlayers();
         showHome();
     });
@@ -1027,6 +1072,7 @@
                 targetScoreInput.value = ongoing.target || 4000;
                 finalRoundActive = ongoing.finalRoundActive || false;
                 finalStarterIndex = ongoing.finalStarterIndex !== null ? ongoing.finalStarterIndex : null;
+                turnScores = ongoing.turnScores || players.map(p => null);
                 renderPlayers();
                 showGame();
                 return;
@@ -1037,6 +1083,7 @@
         if (players.length === 0) {
             players = [{name: '', score: 0, temp: 0, tempHistory: []}, {name: '', score: 0, temp: 0, tempHistory: []}];
         }
+        turnScores = players.map(p => null);
         renderPlayers();
         await renderHistory();
     })();
