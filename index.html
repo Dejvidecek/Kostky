@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="cs">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+    <title>Farkle — počítadlo skóre</title>
+    <style>
+        :root {
+            --bg: #f2f4f7;
+            --surface: #ffffff;
+            --card: #ffffff;
+            --panel: #f7f8fa;
+            --muted: #6b7280;
+            --accent: #16a34a;
+            --danger: #ef4444;
+            --text: #0f172a;
+            --winner-gold: #FDD017;
+            --winner-bg: linear-gradient(90deg, #fff7cc, #fff6b0);
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            color: var(--text);
+            background: linear-gradient(180deg, var(--bg), #eef2f6);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app {
+            max-width: 980px;
+            margin: 0 auto
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+            margin: 16px;
+        }
+
+        h1, h2 {
+            margin: 0
+        }
+
+        label {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #e6e9ef;
+            font-size: 16px;
+            transition: border-color .2s ease;
+        }
+
+        .invalid-input {
+            border-color: var(--danger) !important;
+            box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+        }
+
+        .players-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .player-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .player-row input {
+            flex: 1;
+        }
+
+        .small {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .btn {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 0;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .start-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 17px;
+        }
+
+        .history {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 220px;
+            overflow: auto;
+            margin-top: 8px;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-radius: 10px;
+            background: var(--panel);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .winner-text {
+            color: var(--winner-gold);
+            font-weight: 700;
+        }
+
+        .loser-text {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        /* Nové styly pro herní obrazovku */
+        #page-game {
+            margin-top: 0;
+            padding: 0;
+        }
+
+        .game-interface {
+            height: 100vh; /* Karta hráče přes celou obrazovku */
+            background: var(--surface);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Klíčové pro layout */
+            text-align: center;
+        }
+
+        .player-info {
+            padding-top: 2vh;
+            font-size: 24px;
+        }
+
+        .player-name {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text);
+            transition: color .3s ease;
+        }
+
+        .player-name.first-place {
+            color: var(--accent);
+        }
+
+        .player-name.last-place {
+            color: var(--danger);
+        }
+
+        .player-name .rank {
+            font-weight: 600;
+            font-size: 20px;
+            color: var(--muted);
+            margin-left: 8px;
+        }
+
+        .score-area {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .main-score {
+            font-size: 64px;
+            font-weight: 800;
+            padding: 14px 22px;
+            border-radius: 12px;
+            background: #fbfdff;
+            min-width: 160px;
+            text-align: center;
+            box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.03);
+        }
+
+        .temp-score {
+            font-size: 32px;
+            font-weight: 600;
+            color: #334155;
+            padding: 10px 14px;
+            border-radius: 12px;
+            background: #f3f6f9;
+            min-width: 110px;
+            text-align: center;
+        }
+
+        .is-winner-card {
+            background: var(--winner-bg) !important;
+        }
+
+        /* Nové rozložení tlačítek */
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 2vh;
+        }
+
+        .score-buttons, .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .action-buttons-3col {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .action-buttons-3col #applyBtn {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .action-buttons-3col #undoBtn {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .action-buttons-3col #endBtn {
+            grid-column: 3;
+            grid-row: 1;
+        }
+
+        .full-width-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 700;
+            border: 0;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(16, 24, 40, 0.05);
+            transition: transform .1s ease;
+        }
+
+        .full-width-btn:active {
+            transform: translateY(1px) scale(0.99);
+        }
+
+        .btn-score {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-apply {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-undo {
+            background-color: #eef2f6;
+            color: var(--text);
+            border: 1px solid #d7e1ea;
+        }
+
+        .btn-end {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 0;
+            width: 100%;
+        }
+
+        .btn-nav {
+            flex: 1;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            border: 0;
+            cursor: pointer;
+            background-color: #f0f3f6;
+            color: var(--text);
+        }
+
+        .btn-nav:first-child {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: 1px solid #d7e1ea;
+        }
+
+        .btn-nav:last-child {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
+        /* Žebříček */
+        .player-standings {
+            height: 100vh; /* Žebříček přes celou obrazovku */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .standings-wrapper {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .standings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 4px rgba(16, 24, 40, 0.03);
+            transition: background-color 0.3s;
+        }
+
+        .standings-row.current-player-row {
+            background-color: #dbeafe;
+            font-weight: 700;
+        }
+
+        .standings-info {
+            font-size: 18px;
+        }
+
+        .standings-score {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .del-x {
+            background: transparent;
+            border: 0;
+            color: var(--danger);
+            font-weight: 800;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+        }
+
+        .danger-btn {
+            background: var(--danger);
+            color: #fff;
+            border-radius: 10px;
+            padding: 8px 10px;
+            border: 0;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal {
+            background: var(--card);
+            padding: 18px;
+            border-radius: 14px;
+            max-width: 560px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(2, 6, 23, 0.2);
+        }
+
+        .modal h3 {
+            margin: 0 0 8px;
+        }
+
+        .placement {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 4px;
+            border-bottom: 1px dashed #e6e9ef;
+        }
+
+        .placement .name {
+            font-weight: 700;
+        }
+
+        .placement:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div id="page-home">
+        <div class="card">
+            <h1>Farkle — počítadlo skóre</h1>
+            <div style="margin-top:12px" class="row">
+                <div style="flex:1"><label for="targetScore">Cíl pro výhru</label><input id="targetScore" type="number"
+                                                                                          value="4000" min="1"/></div>
+                <div style="width:120px"><label class="small">Min. hráči</label>
+                    <div class="small" style="text-align:right;margin-top:6px">2+</div>
+                </div>
+            </div>
+            <div style="margin-top:12px"><label>Hráči</label>
+                <div id="playersList" class="players-list"></div>
+                <div class="row" style="margin-top:8px">
+                    <button id="addPlayerBtn" class="btn">Přidat hráče</button>
+                </div>
+            </div>
+            <div style="margin-top:12px">
+                <button id="startGameBtn" class="btn start-btn">HRA</button>
+            </div>
+            <div style="margin-top:14px">
+                <h2 style="margin-bottom:8px;">Historie her</h2>
+                <div id="history" class="history"></div>
+                <div style="margin-top:8px;text-align:center">
+                    <button id="clearHistory" class="danger-btn">Smazat historii</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-game" style="display:none">
+        <div class="game-interface">
+            <div class="player-info">
+                <div id="playerName" class="player-name"></div>
+                <div class="score-area">
+                    <div id="mainScore" class="main-score">0</div>
+                    <div id="tempScore" class="temp-score">+0</div>
+                </div>
+            </div>
+            <div class="button-container">
+                <div class="score-buttons">
+                    <button class="full-width-btn btn-score" data-val="50">+50</button>
+                    <button class="full-width-btn btn-score" data-val="100">+100</button>
+                    <button class="full-width-btn btn-score" data-val="500">+500</button>
+                    <button class="full-width-btn btn-score" data-val="1000">+1000</button>
+                </div>
+                <div class="action-buttons-3col">
+                    <button id="undoBtn" class="full-width-btn btn-undo">Zpět</button>
+                    <button id="applyBtn" class="full-width-btn btn-apply">Zapsat</button>
+                    <button id="endBtn" class="full-width-btn btn-end">Konec</button>
+                </div>
+            </div>
+            <div class="nav-buttons">
+                <button id="prevBtn" class="btn-nav">Předchozí</button>
+                <button id="nextBtn" class="btn-nav">Další</button>
+            </div>
+        </div>
+        <div class="player-standings">
+            <div class="standings-wrapper">
+                <h2 style="margin-bottom:12px; text-align:center;">Žebříček</h2>
+                <div id="standingsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="endModal" style="display:none">
+        <div class="modal-backdrop">
+            <div class="modal">
+                <h3 id="endTitle">Výsledky</h3>
+                <div id="placements"></div>
+                <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+                    <button id="closeModal" class="btn">Zpět na začátek</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_ENDPOINT = null; // Zde vložte URL vašeho API pro historii her
+    const GAME_KEY = 'farkle_ongoing_v1';
+    const LOCAL_HISTORY_KEY = 'farkle_history_local_v1';
+
+    const playersListEl = document.getElementById('playersList');
+    const addPlayerBtn = document.getElementById('addPlayerBtn');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const historyEl = document.getElementById('history');
+    const clearHistoryBtn = document.getElementById('clearHistory');
+    const targetScoreInput = document.getElementById('targetScore');
+    const pageHome = document.getElementById('page-home');
+    const pageGame = document.getElementById('page-game');
+    const playerNameEl = document.getElementById('playerName');
+    const mainScoreEl = document.getElementById('mainScore');
+    const tempScoreEl = document.getElementById('tempScore');
+    const gameInterfaceEl = document.querySelector('.game-interface');
+    const standingsListEl = document.getElementById('standingsList');
+    const applyBtn = document.getElementById('applyBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const endBtn = document.getElementById('endBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const endModal = document.getElementById('endModal');
+    const placementsEl = document.getElementById('placements');
+    const endTitle = document.getElementById('endTitle');
+    const closeModal = document.getElementById('closeModal');
+
+    let players = [];
+    let currentIndex = 0;
+    let finalRoundActive = false;
+    let finalStarterIndex = null;
+    let finalTurnsLeft = 0;
+
+    // --- Logika pro historii (aktualizovaná pro API) ---
+    async function saveHistory(item) {
+        if (API_ENDPOINT) {
+            try {
+                const currentHistory = await loadHistory() || [];
+                currentHistory.unshift(item);
+                const limitedHistory = currentHistory.slice(0, 50);
+                await fetch(API_ENDPOINT, {
+                    method: 'PUT',
+                    body: JSON.stringify(limitedHistory),
+                    headers: {'Content-Type': 'application/json'}
+                });
+            } catch (error) {
+                console.error('Chyba při ukládání historie na server:', error);
+                saveHistoryLocally(item);
+            }
+        } else {
+            saveHistoryLocally(item);
+        }
+        await renderHistory();
+    }
+
+    async function loadHistory() {
+        if (API_ENDPOINT) {
+            try {
+                const response = await fetch(API_ENDPOINT);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                return Array.isArray(data) ? data : [];
+            } catch (error) {
+                console.error('Chyba při načítání historie ze serveru:', error);
+                return loadHistoryLocally();
+            }
+        } else {
+            return loadHistoryLocally();
+        }
+    }
+
+    function saveHistoryLocally(item) {
+        const all = loadHistoryLocally();
+        all.unshift(item);
+        localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(all.slice(0, 50)));
+    }
+
+    function loadHistoryLocally() {
+        return JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || '[]');
+    }
+
+    async function clearRemoteHistory() {
+        if (API_ENDPOINT) {
+            try {
+                await fetch(API_ENDPOINT, {method: 'PUT', body: JSON.stringify([])});
+            } catch (error) {
+                console.error('Chyba při mazání historie na serveru:', error);
+            }
+        }
+        localStorage.removeItem(LOCAL_HISTORY_KEY);
+        await renderHistory();
+    }
+
+    // --- Zbytek logiky aplikace (aktualizovaná o opravy) ---
+    function saveOngoing() {
+        const payload = {
+            players: players.map(p => ({name: p.name, score: p.score})),
+            currentIndex,
+            target: Number(targetScoreInput.value || 4000),
+            finalRoundActive,
+            finalStarterIndex,
+            finalTurnsLeft
+        };
+        localStorage.setItem(GAME_KEY, JSON.stringify(payload));
+    }
+
+    function loadOngoing() {
+        const raw = localStorage.getItem(GAME_KEY);
+        if (!raw) return null;
+        try {
+            return JSON.parse(raw);
+        } catch (e) {
+            return null
+        }
+    }
+
+    function renderPlayers() {
+        playersListEl.innerHTML = '';
+        players.forEach((p, i) => {
+            const row = document.createElement('div');
+            row.className = 'player-row';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Jméno hráče';
+            input.value = p.name || '';
+            input.addEventListener('input', () => {
+                p.name = input.value;
+                saveOngoing();
+            });
+            const del = document.createElement('button');
+            del.className = 'del-x';
+            del.textContent = '✕';
+            del.title = 'Odstranit hráče';
+            del.addEventListener('click', () => {
+                players.splice(i, 1);
+                renderPlayers();
+                saveOngoing();
+            });
+            row.appendChild(input);
+            row.appendChild(del);
+            playersListEl.appendChild(row);
+        });
+    }
+
+    async function renderHistory() {
+        const list = await loadHistory();
+        historyEl.innerHTML = '';
+        if (!list || list.length === 0) {
+            historyEl.innerHTML = '<div class="small" style="padding:6px">Žádná historie</div>';
+            return;
+        }
+        list.forEach(item => {
+            const standings = item.players.slice().sort((a, b) => b.score - a.score);
+            const maxScore = standings.length > 0 ? standings[0].score : 0;
+            const minScore = standings.length > 0 ? standings[standings.length - 1].score : 0;
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            const when = new Date(item.when);
+            const h = document.createElement('div');
+            h.className = 'small';
+            h.textContent = when.toLocaleString();
+            const listWrap = document.createElement('div');
+            const playerEntries = standings.map(p => {
+                let nameHtml = escapeHtml(p.name);
+                if (p.score === maxScore) nameHtml = `<span class="winner-text">${nameHtml}</span>`;
+                if (p.score === minScore && maxScore !== minScore) nameHtml = `<span class="loser-text">${nameHtml}</span>`;
+                return `${nameHtml} (${p.score})`;
+            });
+            listWrap.innerHTML = playerEntries.join(', ');
+            div.appendChild(h);
+            div.appendChild(listWrap);
+            historyEl.appendChild(div);
+        });
+    }
+
+    clearHistoryBtn.addEventListener('click', clearRemoteHistory);
+    addPlayerBtn.addEventListener('click', () => {
+        players.push({name: '', score: 0, temp: 0, tempHistory: []});
+        renderPlayers();
+        saveOngoing();
+    });
+
+    startGameBtn.addEventListener('click', () => {
+        let isValid = true;
+        const nameInputs = playersListEl.querySelectorAll('input');
+        nameInputs.forEach(input => input.classList.remove('invalid-input'));
+        const names = players.map(p => p.name.trim().toLowerCase());
+        const nameCounts = {};
+        names.forEach(name => {
+            nameCounts[name] = (nameCounts[name] || 0) + 1;
+        });
+        nameInputs.forEach((input, i) => {
+            const name = players[i].name.trim();
+            if (name === '') {
+                input.classList.add('invalid-input');
+                isValid = false;
+            }
+            if (nameCounts[name.toLowerCase()] > 1) {
+                input.classList.add('invalid-input');
+                isValid = false;
+            }
+        });
+        if (!isValid) return;
+        if (players.length < 2) {
+            alert('Přidej alespoň 2 hráče.');
+            return;
+        }
+        // Oprava: resetování stavu hráčů pro novou hru
+        players.forEach(p => {
+            p.score = 0;
+            p.temp = 0;
+            p.tempHistory = [];
+            p.name = p.name.trim();
+        });
+        currentIndex = 0;
+        finalRoundActive = false;
+        finalStarterIndex = null;
+        finalTurnsLeft = 0;
+        localStorage.removeItem(GAME_KEY); // Smazat starou hru
+        showGame();
+    });
+
+    function showGame() {
+        pageHome.style.display = 'none';
+        pageGame.style.display = 'block';
+        renderPlayerCard();
+        renderStandings();
+    }
+
+    function showHome() {
+        document.body.style.padding = '16px';
+        pageGame.style.display = 'none';
+        pageHome.style.display = 'block';
+        renderHistory();
+    }
+
+    function computeRanks() {
+        const arr = players.map((p, i) => ({i, score: p.score})).sort((a, b) => b.score - a.score);
+        const ranks = {};
+        let pos = 1;
+        for (let k = 0; k < arr.length;) {
+            let j = k + 1;
+            while (j < arr.length && arr[j].score === arr[k].score) j++;
+            const label = (j - k === 1) ? String(pos) : `${pos}-${pos + (j - k) - 1}`;
+            for (let t = k; t < j; t++) {
+                ranks[arr[t].i] = label;
+            }
+            pos += (j - k);
+            k = j;
+        }
+        return ranks;
+    }
+
+    function renderPlayerCard() {
+        if (players.length === 0) return;
+        const p = players[currentIndex];
+        const ranks = computeRanks();
+        const rankLabel = ranks[currentIndex] ? `#${ranks[currentIndex]}` : '';
+        playerNameEl.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="rank"> ${rankLabel}</span>`;
+        mainScoreEl.textContent = p.score;
+        tempScoreEl.textContent = '+' + (p.temp || 0);
+        const maxScore = Math.max(...players.map(x => x.score));
+        const minScore = Math.min(...players.map(x => x.score));
+        playerNameEl.classList.remove('first-place', 'last-place');
+        if (p.score === maxScore && players.filter(x => x.score === maxScore).length === 1 && players.length > 1) {
+            playerNameEl.classList.add('first-place');
+        }
+        if (p.score === minScore && players.filter(x => x.score === minScore).length === 1 && players.length > 1 && maxScore !== minScore) {
+            playerNameEl.classList.add('last-place');
+        }
+        const target = Number(targetScoreInput.value) || 4000;
+        gameInterfaceEl.classList.toggle('is-winner-card', p.score >= target);
+    }
+
+    function renderStandings() {
+        standingsListEl.innerHTML = '';
+        if (players.length === 0) return;
+        const sortedPlayers = players.map((p, index) => ({...p, originalIndex: index})).sort((a, b) => b.score - a.score);
+        sortedPlayers.forEach((p, rank) => {
+            const row = document.createElement('div');
+            row.className = 'standings-row';
+            if (p.originalIndex === currentIndex) {
+                row.classList.add('current-player-row');
+            }
+            const info = document.createElement('div');
+            info.className = 'standings-info';
+            info.textContent = `#${rank + 1} ${p.name}`;
+            const score = document.createElement('div');
+            score.className = 'standings-score';
+            score.textContent = p.score;
+            row.appendChild(info);
+            row.appendChild(score);
+            standingsListEl.appendChild(row);
+        });
+    }
+
+    document.querySelectorAll('.btn-score').forEach(b => {
+        b.addEventListener('click', () => {
+            const v = Number(b.dataset.val);
+            const p = players[currentIndex];
+            p.temp = (p.temp || 0) + v;
+            p.tempHistory = p.tempHistory || [];
+            p.tempHistory.push(v);
+            renderPlayerCard();
+            saveOngoing();
+        });
+    });
+
+    undoBtn.addEventListener('click', () => {
+        const p = players[currentIndex];
+        p.tempHistory = p.tempHistory || [];
+        if (p.tempHistory.length === 0) return;
+        const last = p.tempHistory.pop();
+        p.temp = (p.temp || 0) - last;
+        renderPlayerCard();
+        saveOngoing();
+    });
+
+    applyBtn.addEventListener('click', () => {
+        applyBtn.disabled = true;
+        const p = players[currentIndex];
+        const delta = p.temp || 0;
+        p.score += delta;
+        p.temp = 0;
+        p.tempHistory = [];
+        mainScoreEl.animate([{transform: 'scale(1)'}, {transform: 'scale(1.08)'}, {transform: 'scale(1)'}], {
+            duration: 320,
+            iterations: 1
+        });
+        renderPlayerCard();
+        renderStandings();
+        setTimeout(() => {
+            const target = Number(targetScoreInput.value) || 4000;
+
+            // Zjednodušená a opravená logika pro finální kolo
+            if (p.score >= target && !finalRoundActive) {
+                finalRoundActive = true;
+                finalStarterIndex = currentIndex;
+            }
+            if (finalRoundActive) {
+                // Poslední hráč ve finálním kole?
+                const isLastTurn = currentIndex === (finalStarterIndex + players.length - 1) % players.length;
+                if (isLastTurn) {
+                    endGameByStandings();
+                    return;
+                }
+            }
+
+            currentIndex = (currentIndex + 1) % players.length;
+            renderPlayerCard();
+            renderStandings();
+            saveOngoing();
+            applyBtn.disabled = false;
+        }, 1500);
+    });
+
+    endBtn.addEventListener('click', endGameByStandings);
+
+    async function endGameByStandings() {
+        const standings = players.map(p => ({
+            name: p.name || 'Hráč',
+            score: Number(p.score || 0)
+        })).sort((a, b) => b.score - a.score);
+        const target = Number(targetScoreInput.value) || 4000;
+        const winners = standings.filter(p => p.score >= target);
+        await saveHistory({when: new Date().toISOString(), players: standings, winners: winners.map(w => w.name)});
+        localStorage.removeItem(GAME_KEY);
+        finalRoundActive = false;
+        finalStarterIndex = null;
+        finalTurnsLeft = 0;
+        showEndModal(standings);
+    }
+
+    prevBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex - 1 + players.length) % players.length;
+        renderPlayerCard();
+        renderStandings();
+        saveOngoing();
+    });
+    nextBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex + 1) % players.length;
+        renderPlayerCard();
+        renderStandings();
+        saveOngoing();
+    });
+
+    function showEndModal(standings) {
+        placementsEl.innerHTML = '';
+        const target = Number(targetScoreInput.value) || 4000;
+        const minScore = standings.length > 0 ? standings[standings.length - 1].score : 0;
+        standings.forEach((s, i) => {
+            const d = document.createElement('div');
+            d.className = 'placement';
+            const name = document.createElement('div');
+            name.className = 'name';
+            const score = document.createElement('div');
+            score.textContent = s.score;
+            let nameHtml = `#${i + 1} ${escapeHtml(s.name)}`;
+            if (s.score >= target) {
+                name.innerHTML = `<span class="winner-text">${nameHtml}</span>`;
+            } else if (s.score === minScore) {
+                name.innerHTML = `<span class="loser-text">${nameHtml}</span>`;
+            } else {
+                name.innerHTML = nameHtml;
+            }
+            d.appendChild(name);
+            d.appendChild(score);
+            placementsEl.appendChild(d);
+        });
+        const winners = standings.filter(p => p.score >= target);
+        if (winners.length > 1) {
+            endTitle.textContent = `Vítězové: ${winners.map(w => w.name).join(', ')}`;
+        } else if (winners.length === 1) {
+            endTitle.textContent = `Vítěz: ${winners[0].name} — ${winners[0].score} bodů`;
+        } else {
+            endTitle.textContent = `Hra skončila bez vítěze`;
+        }
+        endModal.style.display = 'block';
+    }
+
+    closeModal.addEventListener('click', () => {
+        endModal.style.display = 'none';
+        players.forEach(p => {
+            p.score = 0;
+            p.temp = 0;
+            p.tempHistory = [];
+        });
+        currentIndex = 0;
+        renderPlayers();
+        showHome();
+    });
+
+    function escapeHtml(text) {
+        return String(text).replace(/[&<>"']/g, (m) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[m]));
+    }
+
+    (async function init() {
+        const ongoing = loadOngoing();
+        if (ongoing && ongoing.players && ongoing.players.length >= 2) {
+            if (confirm('Načíst rozdělanou hru?')) {
+                players = ongoing.players.map(p => ({
+                    name: p.name || '',
+                    score: Number(p.score || 0),
+                    temp: 0,
+                    tempHistory: []
+                }));
+                currentIndex = ongoing.currentIndex || 0;
+                targetScoreInput.value = ongoing.target || 4000;
+                finalRoundActive = ongoing.finalRoundActive || false;
+                finalStarterIndex = ongoing.finalStarterIndex !== null ? ongoing.finalStarterIndex : null;
+                finalTurnsLeft = ongoing.finalTurnsLeft || 0;
+                renderPlayers();
+                showGame();
+                return;
+            } else {
+                localStorage.removeItem(GAME_KEY);
+            }
+        }
+        if (players.length === 0) {
+            players = [{name: '', score: 0, temp: 0, tempHistory: []}, {name: '', score: 0, temp: 0, tempHistory: []}];
+        }
+        renderPlayers();
+        await renderHistory();
+    })();
+</script>
+</body>
+</html>
