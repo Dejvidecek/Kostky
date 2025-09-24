@@ -263,17 +263,18 @@
             grid-column: 2;
             grid-row: 1;
         }
-
+        
+        /* Prohozeno Zpět a Konec */
         .action-buttons-3col #undoBtn {
-            grid-column: 1;
-            grid-row: 1;
-        }
-
-        .action-buttons-3col #endBtn {
             grid-column: 3;
             grid-row: 1;
         }
 
+        .action-buttons-3col #endBtn {
+            grid-column: 1;
+            grid-row: 1;
+        }
+        
         .full-width-btn {
             width: 100%;
             padding: 16px;
@@ -315,7 +316,7 @@
             display: flex;
             gap: 0;
             width: 100%;
-            margin-bottom: 24px; /* Posunul jsem to výše */
+            margin-top: 12px; /* Posunuto dolů */
         }
 
         .btn-nav {
@@ -483,10 +484,6 @@
                     <div id="tempScore" class="temp-score">+0</div>
                 </div>
             </div>
-            <div class="nav-buttons">
-                <button id="prevBtn" class="btn-nav">Předchozí</button>
-                <button id="nextBtn" class="btn-nav">Další</button>
-            </div>
             <div class="button-container">
                 <div class="score-buttons">
                     <button class="full-width-btn btn-score" data-val="50">+50</button>
@@ -495,9 +492,13 @@
                     <button class="full-width-btn btn-score" data-val="1000">+1000</button>
                 </div>
                 <div class="action-buttons-3col">
-                    <button id="undoBtn" class="full-width-btn btn-undo">Zpět</button>
-                    <button id="applyBtn" class="full-width-btn btn-apply">Zapsat</button>
                     <button id="endBtn" class="full-width-btn btn-end">Konec</button>
+                    <button id="applyBtn" class="full-width-btn btn-apply">Zapsat</button>
+                    <button id="undoBtn" class="full-width-btn btn-undo">Zpět</button>
+                </div>
+                <div class="nav-buttons">
+                    <button id="prevBtn" class="btn-nav">Předchozí</button>
+                    <button id="nextBtn" class="btn-nav">Další</button>
                 </div>
             </div>
         </div>
@@ -849,7 +850,7 @@
             standingsListEl.appendChild(row);
         });
     }
-    
+
     // Nová funkce pro úpravu hlavního skóre
     mainScoreEl.addEventListener('click', () => {
       const p = players[currentIndex];
@@ -924,10 +925,23 @@
             renderStandings();
             saveOngoing();
             applyBtn.disabled = false;
-        }, 1500);
+        }, 800); // Zkrácený čas
     });
 
     endBtn.addEventListener('click', endGameByStandings);
+
+    prevBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex - 1 + players.length) % players.length;
+        renderPlayerCard();
+        renderStandings();
+        saveOngoing();
+    });
+    nextBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex + 1) % players.length;
+        renderPlayerCard();
+        renderStandings();
+        saveOngoing();
+    });
 
     async function endGameByStandings() {
         const standings = players.map(p => ({
@@ -942,19 +956,6 @@
         finalStarterIndex = null;
         showEndModal(standings);
     }
-
-    prevBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex - 1 + players.length) % players.length;
-        renderPlayerCard();
-        renderStandings();
-        saveOngoing();
-    });
-    nextBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex + 1) % players.length;
-        renderPlayerCard();
-        renderStandings();
-        saveOngoing();
-    });
 
     function showEndModal(standings) {
         placementsEl.innerHTML = '';
