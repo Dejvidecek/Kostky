@@ -466,7 +466,7 @@
             <h1>Farkle — počítadlo skóre</h1>
             <div style="margin-top:12px" class="row">
                 <div style="flex:1"><label for="targetScore">Cíl pro výhru</label><input id="targetScore" type="number"
-                                                                                          value="4000" min="1"/></div>
+                                                                                              value="4000" min="1"/></div>
                 <div style="width:120px"><label class="small">Min. hráči</label>
                     <div class="small" style="text-align:right;margin-top:6px">2+</div>
                 </div>
@@ -539,7 +539,6 @@
 </div>
 
 <script>
-    const API_ENDPOINT = null; // Zde vložte URL vašeho API pro historii her
     const GAME_KEY = 'farkle_ongoing_v1';
     const LOCAL_HISTORY_KEY = 'farkle_history_local_v1';
 
@@ -572,44 +571,7 @@
     let finalStarterIndex = null;
     let turnScores = [];
 
-    // --- Logika pro historii (aktualizovaná pro API) ---
-    async function saveHistory(item) {
-        if (API_ENDPOINT) {
-            try {
-                const currentHistory = await loadHistory() || [];
-                currentHistory.unshift(item);
-                const limitedHistory = currentHistory.slice(0, 50);
-                await fetch(API_ENDPOINT, {
-                    method: 'PUT',
-                    body: JSON.stringify(limitedHistory),
-                    headers: {'Content-Type': 'application/json'}
-                });
-            } catch (error) {
-                console.error('Chyba při ukládání historie na server:', error);
-                saveHistoryLocally(item);
-            }
-        } else {
-            saveHistoryLocally(item);
-        }
-        await renderHistory();
-    }
-
-    async function loadHistory() {
-        if (API_ENDPOINT) {
-            try {
-                const response = await fetch(API_ENDPOINT);
-                if (!response.ok) throw new Error('Network response was not ok');
-                const data = await response.json();
-                return Array.isArray(data) ? data : [];
-            } catch (error) {
-                console.error('Chyba při načítání historie ze serveru:', error);
-                return loadHistoryLocally();
-            }
-        } else {
-            return loadHistoryLocally();
-        }
-    }
-
+    // --- Logika pro historii (pouze lokální) ---
     function saveHistoryLocally(item) {
         const all = loadHistoryLocally();
         all.unshift(item);
@@ -620,39 +582,28 @@
         return JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || '[]');
     }
 
-    async function clearRemoteHistory() {
-        if (API_ENDPOINT) {
-            try {
-                await fetch(API_ENDPOINT, {method: 'PUT', body: JSON.stringify([])});
-            } catch (error) {
-                console.error('Chyba při mazání historie na serveru:', error);
-            }
-        }
+    async function saveHistory(item) {
+        saveHistoryLocally(item);
+        await renderHistory();
+    }
+
+    function loadHistory() {
+        return loadHistoryLocally();
+    }
+
+    async function clearHistory() {
         localStorage.removeItem(LOCAL_HISTORY_KEY);
         await renderHistory();
     }
 
     async function deleteHistoryItem(index) {
-        const history = await loadHistory();
+        const history = loadHistory();
         history.splice(index, 1);
-        if (API_ENDPOINT) {
-            try {
-                await fetch(API_ENDPOINT, {
-                    method: 'PUT',
-                    body: JSON.stringify(history),
-                    headers: {'Content-Type': 'application/json'}
-                });
-            } catch (error) {
-                console.error('Chyba při mazání historie na serveru:', error);
-                localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(history));
-            }
-        } else {
-            localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(history));
-        }
+        localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(history));
         await renderHistory();
     }
 
-    // --- Zbytek logiky aplikace (aktualizovaná o opravy) ---
+    // --- Zbytek logiky aplikace ---
     function saveOngoing() {
         const payload = {
             players: players.map(p => ({name: p.name, score: p.score})),
@@ -706,7 +657,7 @@
     }
 
     async function renderHistory() {
-        const list = await loadHistory();
+        const list = loadHistory();
         historyEl.innerHTML = '';
         if (!list || list.length === 0) {
             historyEl.innerHTML = '<div class="small" style="padding:6px">Žádná historie</div>';
@@ -747,7 +698,8 @@
         });
     }
 
-    clearHistoryBtn.addEventListener('click', clearRemoteHistory);
+    clearHistoryBtn.addEventListener('click', clearHistory);
+    
     addPlayerBtn.addEventListener('click', () => {
         players.push({name: '', score: 0, temp: 0, tempHistory: []});
         renderPlayers();
@@ -790,6 +742,7 @@
         finalStarterIndex = null;
         turnScores = players.map(p => null);
         localStorage.removeItem(GAME_KEY);
+        applyBtn.disabled = false;
         showGame();
     });
 
@@ -942,7 +895,7 @@
                 finalStarterIndex = currentIndex;
             }
             if (finalRoundActive) {
-                const isLastTurn = currentIndex === (finalStarterIndex + players.length - 1) % players.length;
+                const isLastTurn = currentIndex === players.length - 1;
                 if (isLastTurn) {
                     endGameByStandings();
                     return;
@@ -1081,7 +1034,12 @@
             }
         }
         if (players.length === 0) {
-            players = [{name: '', score: 0, temp: 0, tempHistory: []}, {name: '', score: 0, temp: 0, tempHistory: []}];
+            players = [{name: '', score: 0, temp: 0, tempHistory: []}, {
+                name: '',
+                score: 0,
+                temp: 0,
+                tempHistory: []
+            }];
         }
         turnScores = players.map(p => null);
         renderPlayers();
@@ -1090,4 +1048,3 @@
 </script>
 </body>
 </html>
-
