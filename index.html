@@ -1,1244 +1,1214 @@
 <!doctype html>
 <html lang="cs">
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-    <title>Farkle — počítadlo skóre</title>
-    <style>
-        :root {
-            --bg: #f2f4f7;
-            --surface: #ffffff;
-            --card: #ffffff;
-            --panel: #f7f8fa;
-            --muted: #6b7280;
-            --accent: #16a34a;
-            --danger: #ef4444;
-            --text: #0f172a;
-            --winner-gold: #FDD017;
-            --winner-bg: linear-gradient(90deg, #fff7cc, #fff6b0);
-            --radius: 12px;
-        }
-
-        * { box-sizing: border-box }
-
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-            color: var(--text);
-            background: linear-gradient(180deg, var(--bg), #eef2f6);
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .app { max-width: 980px; margin: 0 auto }
-
-        .card {
-            background: var(--card);
-            border-radius: var(--radius);
-            padding: 16px;
-            box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
-            margin: 16px;
-        }
-
-        h1, h2 { margin: 0 }
-
-        label { color: var(--muted); font-size: 13px; }
-
-        .row {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        input[type="text"], input[type="number"] {
-            width: 100%;
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid #e6e9ef;
-            font-size: 16px;
-            transition: border-color .2s ease;
-        }
-
-        .invalid-input {
-            border-color: var(--danger) !important;
-            box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
-        }
-
-        .players-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 6px;
-        }
-
-        .player-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            user-select: none;
-        }
-
-        .player-row input { flex: 1; }
-
-        .player-row.dragging {
-            opacity: 0.72;
-            transform: scale(0.99);
-        }
-
-        .small { font-size: 13px; color: var(--muted); }
-
-        .btn {
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 0;
-            background: var(--accent);
-            color: #fff;
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .start-btn {
-            width: 100%;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 17px;
-        }
-
-        .history {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 220px;
-            overflow: auto;
-            margin-top: 8px;
-        }
-
-        .history-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-radius: 10px;
-            background: var(--panel);
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .history-item .content { flex: 1; }
-
-        .history-item .delete-btn {
-            margin-left: 10px;
-            background: transparent;
-            border: none;
-            color: var(--danger);
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        .winner-text { color: var(--winner-gold); font-weight: 700; }
-        .loser-text { color: var(--danger); font-weight: 700; }
-
-        /* --- Drag handle v menu hráčů --- */
-        .drag-handle {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            border: 1px solid #e6e9ef;
-            background: #f7f8fa;
-            color: #334155;
-            font-weight: 800;
-            cursor: grab;
-            touch-action: none; /* důležité pro mobile drag */
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            line-height: 1;
-        }
-        .drag-handle:active { cursor: grabbing; }
-
-        /* --- Herní obrazovka --- */
-        #page-game { margin-top: 0; padding: 0; }
-
-        .game-interface {
-            height: 100dvh;
-            background: var(--surface);
-            padding: 12px 14px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            text-align: center;
-        }
-
-        .player-info {
-            padding-top: 1vh;
-            padding-bottom: 12px;
-        }
-
-        /* Mini žebříček (horizontálně) */
-        .mini-standings {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            padding: 6px 0 10px;
-            margin-bottom: 4px;
-        }
-        .mini-standings::-webkit-scrollbar { height: 0; }
-
-        .mini-item {
-            flex: 0 0 auto;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 10px;
-            border-radius: 999px;
-            background: #f3f6f9;
-            border: 1px solid #e6e9ef;
-            font-size: 13px;
-            white-space: nowrap;
-        }
-        .mini-item.current { background: #dbeafe; font-weight: 800; }
-        .mini-item.scored { background: #dcfce7; font-weight: 700; }
-
-        .mini-rank { color: var(--muted); font-weight: 800; min-width: 18px; text-align: left; }
-        .mini-initial { font-weight: 800; }
-        .mini-score { font-weight: 900; }
-
-        .mini-item.gold .mini-rank,
-        .mini-item.gold .mini-initial,
-        .mini-item.gold .mini-score { color: var(--winner-gold); }
-
-        .mini-item.danger .mini-rank,
-        .mini-item.danger .mini-initial,
-        .mini-item.danger .mini-score { color: var(--danger); }
-
-        .player-name {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: var(--text);
-            transition: color .3s ease;
-            cursor: pointer;
-        }
-
-        .player-name.first-place { color: var(--accent); }
-        .player-name.last-place { color: var(--danger); }
-
-        .player-name .rank {
-            font-weight: 600;
-            font-size: 22px;
-            color: var(--muted);
-            margin-left: 8px;
-        }
-
-        .score-area {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .main-score {
-            font-size: 60px;
-            font-weight: 800;
-            padding: 12px 18px;
-            border-radius: 12px;
-            background: #fbfdff;
-            min-width: 150px;
-            text-align: center;
-            box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.03);
-            cursor: pointer;
-        }
-
-        .temp-score {
-            font-size: 30px;
-            font-weight: 600;
-            color: #334155;
-            padding: 10px 14px;
-            border-radius: 12px;
-            background: #f3f6f9;
-            min-width: 105px;
-            text-align: center;
-        }
-
-        .is-winner-card { background: var(--winner-bg) !important; }
-
-        .button-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding-bottom: 1vh;
-        }
-
-        .score-buttons, .action-buttons { display: flex; flex-direction: column; gap: 10px; }
-
-        .action-buttons-3col {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-        }
-
-        .action-buttons-3col #applyBtn { grid-column: 2; grid-row: 1; }
-        .action-buttons-3col #undoBtn  { grid-column: 3; grid-row: 1; }
-        .action-buttons-3col #endBtn   { grid-column: 1; grid-row: 1; }
-
-        .full-width-btn {
-            width: 100%;
-            padding: 20px;
-            font-size: 20px;
-            font-weight: 700;
-            border: 0;
-            border-radius: 12px;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(16, 24, 40, 0.05);
-            transition: transform .1s ease;
-        }
-
-        .full-width-btn:active { transform: translateY(1px) scale(0.99); }
-
-        .btn-score { background-color: var(--accent); color: white; }
-        .btn-apply { background-color: var(--accent); color: white; }
-        .btn-undo  { background-color: #eef2f6; color: var(--text); border: 1px solid #d7e1ea; }
-        .btn-end   { background-color: var(--danger); color: white; }
-
-        .nav-buttons {
-            display: flex;
-            gap: 0;
-            width: 100%;
-            margin-top: 8px;
-        }
-
-        .btn-nav {
-            flex: 1;
-            padding: 20px;
-            border-radius: 12px;
-            font-size: 20px;
-            font-weight: 700;
-            border: 0;
-            cursor: pointer;
-            background-color: #f0f3f6;
-            color: var(--text);
-        }
-
-        .btn-nav:first-child {
-            border-top-right-radius: 0;
-            border-bottom-right-radius: 0;
-            border-right: 1px solid #d7e1ea;
-        }
-
-        .btn-nav:last-child {
-            border-top-left-radius: 0;
-            border-bottom-left-radius: 0;
-        }
-
-        /* Původní velký žebříček dole schován – teď je nahoře v mini verzi */
-        .player-standings { display: none; }
-
-        .standings-wrapper { width: 100%; max-width: 500px; }
-
-        .standings-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: var(--surface);
-            border-radius: 10px;
-            margin-bottom: 8px;
-            box-shadow: 0 2px 4px rgba(16, 24, 40, 0.03);
-            transition: background-color 0.3s;
-        }
-
-        .standings-row.current-player-row { background-color: #dbeafe; font-weight: 700; }
-        .standings-row.player-scored-row  { background-color: #dcfce7; font-weight: 600; }
-
-        .standings-info { font-size: 18px; }
-        .standings-score { font-size: 20px; font-weight: 700; }
-
-        .standings-info .gold-text { color: var(--winner-gold); font-weight: 700; }
-        .standings-info .danger-text { color: var(--danger); font-weight: 700; }
-
-        .del-x {
-            background: transparent;
-            border: 0;
-            color: var(--danger);
-            font-weight: 800;
-            font-size: 18px;
-            cursor: pointer;
-            padding: 6px;
-            border-radius: 8px;
-        }
-
-        .danger-btn {
-            background: var(--danger);
-            color: #fff;
-            border-radius: 10px;
-            padding: 8px 10px;
-            border: 0;
-            cursor: pointer;
-            font-weight: 700;
-        }
-
-        .modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(2, 6, 23, 0.45);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 1000;
-        }
-
-        .modal {
-            background: var(--card);
-            padding: 18px;
-            border-radius: 14px;
-            max-width: 560px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(2, 6, 23, 0.2);
-        }
-
-        .modal h3 { margin: 0 0 8px; }
-
-        .placement {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 4px;
-            border-bottom: 1px dashed #e6e9ef;
-        }
-
-        .placement .name { font-weight: 700; }
-        .placement:last-child { border-bottom: none; }
-
-        /* Mobile/nižší displeje: ušetřit výšku */
-        @media (max-width: 480px), (max-height: 760px) {
-            .game-interface { padding: 10px 12px; }
-            .player-name { font-size: 28px; margin-bottom: 8px; }
-            .player-name .rank { font-size: 20px; }
-            .main-score { font-size: 48px; min-width: 136px; padding: 10px 14px; }
-            .temp-score { font-size: 24px; min-width: 96px; padding: 8px 10px; }
-
-            .score-buttons {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-
-            .full-width-btn { padding: 14px; font-size: 18px; }
-            .btn-nav { padding: 14px; font-size: 18px; }
-        }
-    </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Farkle — počítadlo skóre</title>
+  <style>
+    :root {
+      --bg: #f2f4f7;
+      --surface: #ffffff;
+      --card: #ffffff;
+      --panel: #f7f8fa;
+      --muted: #6b7280;
+      --accent: #16a34a;
+      --danger: #ef4444;
+      --text: #0f172a;
+      --winner-gold: #FDD017;
+      --winner-bg: linear-gradient(90deg, #fff7cc, #fff6b0);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box }
+
+    html, body { height: 100%; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color: var(--text);
+      background: linear-gradient(180deg, var(--bg), #eef2f6);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app { max-width: 980px; margin: 0 auto }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+      margin: 16px;
+    }
+
+    h1, h2 { margin: 0 }
+
+    label { color: var(--muted); font-size: 13px; }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #e6e9ef;
+      font-size: 16px;
+      transition: border-color .2s ease;
+    }
+
+    .invalid-input {
+      border-color: var(--danger) !important;
+      box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+    }
+
+    .players-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .player-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      user-select: none;
+    }
+
+    .player-row input { flex: 1; }
+
+    .player-row.dragging {
+      opacity: 0.72;
+      transform: scale(0.99);
+    }
+
+    .small { font-size: 13px; color: var(--muted); }
+
+    .btn {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 0;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .start-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 17px;
+    }
+
+    .history {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 220px;
+      overflow: auto;
+      margin-top: 8px;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-radius: 10px;
+      background: var(--panel);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .history-item .content { flex: 1; }
+
+    .history-item .delete-btn {
+      margin-left: 10px;
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .winner-text { color: var(--winner-gold); font-weight: 700; }
+    .loser-text { color: var(--danger); font-weight: 700; }
+
+    .del-x {
+      background: transparent;
+      border: 0;
+      color: var(--danger);
+      font-weight: 800;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 8px;
+    }
+
+    .danger-btn {
+      background: var(--danger);
+      color: #fff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      border: 0;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    /* drag handle v menu hráčů (jen ikonka jako křížek) */
+    .drag-handle {
+      background: transparent;
+      border: 0;
+      color: var(--danger);
+      font-weight: 800;
+      font-size: 18px;
+      cursor: grab;
+      padding: 6px;
+      border-radius: 8px;
+      touch-action: none;
+      line-height: 1;
+    }
+    .drag-handle:active { cursor: grabbing; }
+
+    /* --- Herní obrazovka --- */
+    #page-game { margin-top: 0; padding: 0; }
+
+    .game-interface {
+      height: 100vh;
+      height: 100dvh;
+      background: var(--surface);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      text-align: center;
+    }
+
+    .player-info {
+      padding-top: 2vh;
+      font-size: 24px;
+      padding-bottom: 18px;
+    }
+
+    /* Mini žebříček (horizontálně) */
+    .mini-standings {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 6px 0 10px;
+      margin: 0 auto;
+      max-width: 100%;
+    }
+    .mini-standings::-webkit-scrollbar { height: 0; }
+
+    .mini-item {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #f3f6f9;
+      border: 1px solid #e6e9ef;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .mini-item.current { background: #dbeafe; font-weight: 800; }
+    .mini-item.scored { background: #dcfce7; font-weight: 700; }
+
+    .mini-rank { color: var(--muted); font-weight: 800; min-width: 18px; text-align: left; }
+    .mini-name { font-weight: 800; }
+    .mini-score { font-weight: 900; }
+
+    .mini-item.gold .mini-rank,
+    .mini-item.gold .mini-name,
+    .mini-item.gold .mini-score { color: var(--winner-gold); }
+
+    .mini-item.danger .mini-rank,
+    .mini-item.danger .mini-name,
+    .mini-item.danger .mini-score { color: var(--danger); }
+
+    .player-name {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 10px 0 12px;
+      color: var(--text);
+      transition: color .3s ease;
+      cursor: pointer;
+    }
+
+    .player-name.first-place { color: var(--accent); }
+    .player-name.last-place { color: var(--danger); }
+
+    .player-name .rank {
+      font-weight: 600;
+      font-size: 28px;
+      color: var(--muted);
+      margin-left: 8px;
+    }
+
+    .score-area {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .main-score-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .predicted-score {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      opacity: 0.9;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .main-score {
+      font-size: 64px;
+      font-weight: 800;
+      padding: 14px 22px;
+      border-radius: 12px;
+      background: #fbfdff;
+      min-width: 160px;
+      text-align: center;
+      box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.03);
+      cursor: pointer;
+    }
+
+    .temp-score {
+      font-size: 32px;
+      font-weight: 600;
+      color: #334155;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: #f3f6f9;
+      min-width: 110px;
+      text-align: center;
+    }
+
+    .is-winner-card { background: var(--winner-bg) !important; }
+
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-bottom: 2vh;
+      margin-top: 10px;
+    }
+
+    .score-buttons, .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .action-buttons-3col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .action-buttons-3col #applyBtn { grid-column: 2; grid-row: 1; }
+    .action-buttons-3col #undoBtn  { grid-column: 3; grid-row: 1; }
+    .action-buttons-3col #endBtn   { grid-column: 1; grid-row: 1; }
+
+    .full-width-btn {
+      width: 100%;
+      padding: 24px;
+      font-size: 22px;
+      font-weight: 700;
+      border: 0;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(16, 24, 40, 0.05);
+      transition: transform .1s ease;
+    }
+
+    .full-width-btn:active { transform: translateY(1px) scale(0.99); }
+
+    .btn-score { background-color: var(--accent); color: white; }
+    .btn-apply { background-color: var(--accent); color: white; }
+    .btn-undo  { background-color: #eef2f6; color: var(--text); border: 1px solid #d7e1ea; }
+    .btn-end   { background-color: var(--danger); color: white; }
+
+    .nav-buttons {
+      display: flex;
+      gap: 0;
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    .btn-nav {
+      flex: 1;
+      padding: 24px;
+      border-radius: 12px;
+      font-size: 22px;
+      font-weight: 700;
+      border: 0;
+      cursor: pointer;
+      background-color: #f0f3f6;
+      color: var(--text);
+    }
+
+    .btn-nav:first-child {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      border-right: 1px solid #d7e1ea;
+    }
+
+    .btn-nav:last-child {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+
+    /* původní velký žebříček dole schováme */
+    .player-standings { display: none; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: var(--card);
+      padding: 18px;
+      border-radius: 14px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(2, 6, 23, 0.2);
+    }
+
+    .modal h3 { margin: 0 0 8px; }
+
+    .placement {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 4px;
+      border-bottom: 1px dashed #e6e9ef;
+    }
+
+    .placement .name { font-weight: 700; }
+    .placement:last-child { border-bottom: none; }
+  </style>
 </head>
 <body>
 <div class="app">
-    <div id="page-home">
-        <div class="card">
-            <h1>Farkle — počítadlo skóre</h1>
-            <div style="margin-top:12px" class="row">
-                <div style="flex:1">
-                    <label for="targetScore">Cíl pro výhru</label>
-                    <input id="targetScore" type="number" value="4000" min="1"/>
-                </div>
-                <div style="width:120px">
-                    <label class="small">Min. hráči</label>
-                    <div class="small" style="text-align:right;margin-top:6px">2+</div>
-                </div>
-            </div>
-            <div style="margin-top:12px">
-                <label>Hráči</label>
-                <div id="playersList" class="players-list"></div>
-                <div class="row" style="margin-top:8px">
-                    <button id="addPlayerBtn" class="btn">Přidat hráče</button>
-                </div>
-            </div>
-            <div style="margin-top:12px">
-                <button id="startGameBtn" class="btn start-btn">HRA</button>
-            </div>
-            <div style="margin-top:14px">
-                <h2 style="margin-bottom:8px;">Historie her</h2>
-                <div id="history" class="history"></div>
-                <div style="margin-top:8px;text-align:center">
-                    <button id="clearHistory" class="danger-btn">Smazat historii</button>
-                </div>
-            </div>
+  <div id="page-home">
+    <div class="card">
+      <h1>Farkle — počítadlo skóre</h1>
+
+      <div style="margin-top:12px" class="row">
+        <div style="flex:1">
+          <label for="targetScore">Cíl pro výhru</label>
+          <input id="targetScore" type="number" value="4000" min="1"/>
         </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="row" style="justify-content:space-between; align-items:baseline;">
+          <label>Hráči</label>
+          <div class="small" style="text-align:right; line-height:1.2;">
+            <div>Min. hráči</div>
+            <div style="text-align:right;margin-top:4px">2+</div>
+          </div>
+        </div>
+
+        <div id="playersList" class="players-list"></div>
+        <div class="row" style="margin-top:8px">
+          <button id="addPlayerBtn" class="btn">Přidat hráče</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <button id="startGameBtn" class="btn start-btn">HRA</button>
+      </div>
+
+      <div style="margin-top:14px">
+        <h2 style="margin-bottom:8px;">Historie her</h2>
+        <div id="history" class="history"></div>
+        <div style="margin-top:8px;text-align:center">
+          <button id="clearHistory" class="danger-btn">Smazat historii</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-game" style="display:none">
+    <div class="game-interface">
+      <div class="player-info">
+        <div id="miniStandings" class="mini-standings"></div>
+
+        <div id="playerName" class="player-name" title="Klikni pro přejmenování"></div>
+
+        <div class="score-area">
+          <div class="main-score-wrap">
+            <div id="predictedScore" class="predicted-score"></div>
+            <div id="mainScore" class="main-score">0</div>
+          </div>
+          <div id="tempScore" class="temp-score">+0</div>
+        </div>
+      </div>
+
+      <div class="button-container">
+        <div class="score-buttons">
+          <button class="full-width-btn btn-score" data-val="50">+50</button>
+          <button class="full-width-btn btn-score" data-val="100">+100</button>
+          <button class="full-width-btn btn-score" data-val="500">+500</button>
+          <button class="full-width-btn btn-score" data-val="1000">+1000</button>
+        </div>
+
+        <div class="action-buttons-3col">
+          <button id="endBtn" class="full-width-btn btn-end">Konec</button>
+          <button id="applyBtn" class="full-width-btn btn-apply">Zapsat</button>
+          <button id="undoBtn" class="full-width-btn btn-undo">Zpět</button>
+        </div>
+
+        <div class="nav-buttons">
+          <button id="prevBtn" class="btn-nav">Předchozí</button>
+          <button id="nextBtn" class="btn-nav">Další</button>
+        </div>
+      </div>
     </div>
 
-    <div id="page-game" style="display:none">
-        <div class="game-interface">
-            <div class="player-info">
-                <div id="miniStandings" class="mini-standings"></div>
-                <div id="playerName" class="player-name" title="Klikni pro přejmenování"></div>
-                <div class="score-area">
-                    <div id="mainScore" class="main-score">0</div>
-                    <div id="tempScore" class="temp-score">+0</div>
-                </div>
-            </div>
-
-            <div class="button-container">
-                <div class="score-buttons">
-                    <button class="full-width-btn btn-score" data-val="50">+50</button>
-                    <button class="full-width-btn btn-score" data-val="100">+100</button>
-                    <button class="full-width-btn btn-score" data-val="500">+500</button>
-                    <button class="full-width-btn btn-score" data-val="1000">+1000</button>
-                </div>
-
-                <div class="action-buttons-3col">
-                    <button id="endBtn" class="full-width-btn btn-end">Konec</button>
-                    <button id="applyBtn" class="full-width-btn btn-apply">Zapsat</button>
-                    <button id="undoBtn" class="full-width-btn btn-undo">Zpět</button>
-                </div>
-
-                <div class="nav-buttons">
-                    <button id="prevBtn" class="btn-nav">Předchozí</button>
-                    <button id="nextBtn" class="btn-nav">Další</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ponecháno (schované CSSem), aby zbytek kódu zůstal kompatibilní -->
-        <div class="player-standings">
-            <div class="standings-wrapper">
-                <h2 style="margin-bottom:12px; text-align:center;">Žebříček</h2>
-                <div id="standingsList"></div>
-            </div>
-        </div>
+    <div class="player-standings">
+      <div class="standings-wrapper">
+        <h2 style="margin-bottom:12px; text-align:center;">Žebříček</h2>
+        <div id="standingsList"></div>
+      </div>
     </div>
+  </div>
 
-    <div id="endModal" style="display:none">
-        <div class="modal-backdrop">
-            <div class="modal">
-                <h3 id="endTitle">Výsledky</h3>
-                <div id="placements"></div>
-                <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-                    <button id="closeModal" class="btn">Zpět na začátek</button>
-                </div>
-            </div>
+  <div id="endModal" style="display:none">
+    <div class="modal-backdrop">
+      <div class="modal">
+        <h3 id="endTitle">Výsledky</h3>
+        <div id="placements"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+          <button id="closeModal" class="btn">Zpět na začátek</button>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <script>
-    const GAME_KEY = 'farkle_ongoing_v1';
-    const LOCAL_HISTORY_KEY = 'farkle_history_local_v1';
+  const GAME_KEY = 'farkle_ongoing_v1';
+  const LOCAL_HISTORY_KEY = 'farkle_history_local_v1';
 
-    const playersListEl = document.getElementById('playersList');
-    const addPlayerBtn = document.getElementById('addPlayerBtn');
-    const startGameBtn = document.getElementById('startGameBtn');
-    const historyEl = document.getElementById('history');
-    const clearHistoryBtn = document.getElementById('clearHistory');
-    const targetScoreInput = document.getElementById('targetScore');
-    const pageHome = document.getElementById('page-home');
-    const pageGame = document.getElementById('page-game');
-    const miniStandingsEl = document.getElementById('miniStandings');
-    const playerNameEl = document.getElementById('playerName');
-    const mainScoreEl = document.getElementById('mainScore');
-    const tempScoreEl = document.getElementById('tempScore');
-    const gameInterfaceEl = document.querySelector('.game-interface');
-    const standingsListEl = document.getElementById('standingsList');
-    const applyBtn = document.getElementById('applyBtn');
-    const undoBtn = document.getElementById('undoBtn');
-    const endBtn = document.getElementById('endBtn');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const endModal = document.getElementById('endModal');
-    const placementsEl = document.getElementById('placements');
-    const endTitle = document.getElementById('endTitle');
-    const closeModal = document.getElementById('closeModal');
+  const playersListEl = document.getElementById('playersList');
+  const addPlayerBtn = document.getElementById('addPlayerBtn');
+  const startGameBtn = document.getElementById('startGameBtn');
+  const historyEl = document.getElementById('history');
+  const clearHistoryBtn = document.getElementById('clearHistory');
+  const targetScoreInput = document.getElementById('targetScore');
 
-    let players = [];
-    let currentIndex = 0;
-    let finalRoundActive = false;
-    let finalStarterIndex = null;
-    let turnScores = [];
+  const pageHome = document.getElementById('page-home');
+  const pageGame = document.getElementById('page-game');
 
-    // drag state pro menu hráčů
-    const dragState = { active: false, id: null, pointerId: null };
+  const miniStandingsEl = document.getElementById('miniStandings');
+  const playerNameEl = document.getElementById('playerName');
+  const predictedScoreEl = document.getElementById('predictedScore');
+  const mainScoreEl = document.getElementById('mainScore');
+  const tempScoreEl = document.getElementById('tempScore');
+  const gameInterfaceEl = document.querySelector('.game-interface');
 
-    function makeId() {
-        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-        return String(Date.now()) + '_' + Math.random().toString(16).slice(2);
+  const standingsListEl = document.getElementById('standingsList'); // compat
+  const applyBtn = document.getElementById('applyBtn');
+  const undoBtn = document.getElementById('undoBtn');
+  const endBtn = document.getElementById('endBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  const endModal = document.getElementById('endModal');
+  const placementsEl = document.getElementById('placements');
+  const endTitle = document.getElementById('endTitle');
+  const closeModal = document.getElementById('closeModal');
+
+  let players = [];
+  let currentIndex = 0;
+  let finalRoundActive = false;
+  let finalStarterIndex = null;
+  let turnScores = [];
+
+  const dragState = { active: false, id: null, pointerId: null };
+
+  function makeId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return String(Date.now()) + '_' + Math.random().toString(16).slice(2);
+  }
+
+  function newPlayer(name = '', score = 0) {
+    return { id: makeId(), name, score, temp: 0, tempHistory: [] };
+  }
+
+  function isDuplicateName(name, ignoreId = null) {
+    const n = name.trim().toLowerCase();
+    if (!n) return false;
+    return players.some(p => p.id !== ignoreId && (p.name || '').trim().toLowerCase() === n);
+  }
+
+  function saveHistoryLocally(item) {
+    const all = loadHistoryLocally();
+    all.unshift(item);
+    localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(all.slice(0, 50)));
+  }
+
+  function loadHistoryLocally() {
+    return JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || '[]');
+  }
+
+  async function saveHistory(item) {
+    saveHistoryLocally(item);
+    await renderHistory();
+  }
+
+  function loadHistory() {
+    return loadHistoryLocally();
+  }
+
+  async function clearHistory() {
+    localStorage.removeItem(LOCAL_HISTORY_KEY);
+    await renderHistory();
+  }
+
+  async function deleteHistoryItem(index) {
+    const history = loadHistory();
+    history.splice(index, 1);
+    localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(history));
+    await renderHistory();
+  }
+
+  function saveOngoing() {
+    const payload = {
+      players: players.map(p => ({ id: p.id, name: p.name, score: p.score })),
+      currentIndex,
+      target: Number(targetScoreInput.value || 4000),
+      finalRoundActive,
+      finalStarterIndex,
+      turnScores
+    };
+    localStorage.setItem(GAME_KEY, JSON.stringify(payload));
+  }
+
+  function loadOngoing() {
+    const raw = localStorage.getItem(GAME_KEY);
+    if (!raw) return null;
+    try {
+      const data = JSON.parse(raw);
+      data.players = (data.players || []).map(p => ({
+        id: p.id || makeId(),
+        name: p.name,
+        score: p.score,
+        temp: 0,
+        tempHistory: []
+      }));
+      return data;
+    } catch (e) {
+      return null;
     }
+  }
 
-    function newPlayer(name = '', score = 0) {
-        return { id: makeId(), name, score, temp: 0, tempHistory: [] };
+  function startDragPlayer(playerId, e) {
+    dragState.active = true;
+    dragState.id = playerId;
+    dragState.pointerId = e.pointerId;
+
+    try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+
+    document.addEventListener('pointermove', onDragMove, { passive: false });
+    document.addEventListener('pointerup', endDrag, { passive: false });
+
+    renderPlayers();
+  }
+
+  function onDragMove(e) {
+    if (!dragState.active) return;
+    e.preventDefault();
+
+    const y = e.clientY;
+    const rows = Array.from(playersListEl.querySelectorAll('.player-row'));
+    if (rows.length === 0) return;
+
+    let targetIndex = -1;
+    for (let i = 0; i < rows.length; i++) {
+      const rect = rows[i].getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if (y < mid) { targetIndex = i; break; }
     }
+    if (targetIndex === -1) targetIndex = rows.length - 1;
 
-    function isDuplicateName(name, ignoreId = null) {
-        const n = name.trim().toLowerCase();
-        if (!n) return false;
-        return players.some(p => p.id !== ignoreId && (p.name || '').trim().toLowerCase() === n);
+    const fromIndex = players.findIndex(p => p.id === dragState.id);
+    if (fromIndex === -1) return;
+
+    if (targetIndex !== fromIndex) {
+      const moved = players.splice(fromIndex, 1)[0];
+      players.splice(targetIndex, 0, moved);
+      renderPlayers();
+      saveOngoing();
     }
+  }
 
-    // --- Logika pro historii (pouze lokální) ---
-    function saveHistoryLocally(item) {
-        const all = loadHistoryLocally();
-        all.unshift(item);
-        localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(all.slice(0, 50)));
-    }
+  function endDrag(e) {
+    if (!dragState.active) return;
+    e.preventDefault();
 
-    function loadHistoryLocally() {
-        return JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || '[]');
-    }
+    dragState.active = false;
+    dragState.id = null;
+    dragState.pointerId = null;
 
-    async function saveHistory(item) {
-        saveHistoryLocally(item);
-        await renderHistory();
-    }
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup', endDrag);
 
-    function loadHistory() {
-        return loadHistoryLocally();
-    }
+    renderPlayers();
+    saveOngoing();
+  }
 
-    async function clearHistory() {
-        localStorage.removeItem(LOCAL_HISTORY_KEY);
-        await renderHistory();
-    }
+  function renderPlayers() {
+    playersListEl.innerHTML = '';
+    players.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = 'player-row';
+      row.dataset.id = p.id;
+      if (dragState.active && dragState.id === p.id) row.classList.add('dragging');
 
-    async function deleteHistoryItem(index) {
-        const history = loadHistory();
-        history.splice(index, 1);
-        localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(history));
-        await renderHistory();
-    }
-
-    // --- Zbytek logiky aplikace ---
-    function saveOngoing() {
-        const payload = {
-            players: players.map(p => ({ id: p.id, name: p.name, score: p.score })),
-            currentIndex,
-            target: Number(targetScoreInput.value || 4000),
-            finalRoundActive,
-            finalStarterIndex,
-            turnScores
-        };
-        localStorage.setItem(GAME_KEY, JSON.stringify(payload));
-    }
-
-    function loadOngoing() {
-        const raw = localStorage.getItem(GAME_KEY);
-        if (!raw) return null;
-        try {
-            const data = JSON.parse(raw);
-            data.players = (data.players || []).map(p => ({
-                id: p.id || makeId(),
-                name: p.name,
-                score: p.score,
-                temp: 0,
-                tempHistory: []
-            }));
-            return data;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    function startDragPlayer(playerId, e) {
-        dragState.active = true;
-        dragState.id = playerId;
-        dragState.pointerId = e.pointerId;
-
-        try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
-        e.preventDefault();
-
-        document.addEventListener('pointermove', onDragMove, { passive: false });
-        document.addEventListener('pointerup', endDrag, { passive: false });
-
-        renderPlayers();
-    }
-
-    function onDragMove(e) {
-        if (!dragState.active) return;
-        e.preventDefault();
-
-        const y = e.clientY;
-        const rows = Array.from(playersListEl.querySelectorAll('.player-row'));
-        if (rows.length === 0) return;
-
-        let targetIndex = -1;
-        for (let i = 0; i < rows.length; i++) {
-            const rect = rows[i].getBoundingClientRect();
-            const mid = rect.top + rect.height / 2;
-            if (y < mid) { targetIndex = i; break; }
-        }
-        if (targetIndex === -1) targetIndex = rows.length - 1;
-
-        const fromIndex = players.findIndex(p => p.id === dragState.id);
-        if (fromIndex === -1) return;
-
-        if (targetIndex !== fromIndex) {
-            const moved = players.splice(fromIndex, 1)[0];
-            players.splice(targetIndex, 0, moved);
-            renderPlayers();
-            saveOngoing();
-        }
-    }
-
-    function endDrag(e) {
-        if (!dragState.active) return;
-        e.preventDefault();
-
-        dragState.active = false;
-        dragState.id = null;
-        dragState.pointerId = null;
-
-        document.removeEventListener('pointermove', onDragMove);
-        document.removeEventListener('pointerup', endDrag);
-
-        renderPlayers();
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Jméno hráče';
+      input.value = p.name || '';
+      input.addEventListener('input', () => {
+        p.name = input.value;
         saveOngoing();
-    }
+      });
 
-    function renderPlayers() {
-        playersListEl.innerHTML = '';
-        players.forEach((p, i) => {
-            const row = document.createElement('div');
-            row.className = 'player-row';
-            row.dataset.id = p.id;
-            if (dragState.active && dragState.id === p.id) row.classList.add('dragging');
-
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.placeholder = 'Jméno hráče';
-            input.value = p.name || '';
-            input.addEventListener('input', () => {
-                p.name = input.value;
-                saveOngoing();
-            });
-
-            const del = document.createElement('button');
-            del.className = 'del-x';
-            del.textContent = '✕';
-            del.title = 'Odstranit hráče';
-            del.addEventListener('click', () => {
-                players.splice(i, 1);
-                renderPlayers();
-                saveOngoing();
-            });
-
-            const handle = document.createElement('button');
-            handle.className = 'drag-handle';
-            handle.type = 'button';
-            handle.title = 'Přetáhni pro změnu pořadí';
-            handle.textContent = '≡';
-            handle.addEventListener('pointerdown', (e) => startDragPlayer(p.id, e));
-
-            row.appendChild(input);
-            row.appendChild(del);
-            row.appendChild(handle);
-
-            playersListEl.appendChild(row);
-        });
-    }
-
-    async function renderHistory() {
-        const list = loadHistory();
-        historyEl.innerHTML = '';
-        if (!list || list.length === 0) {
-            historyEl.innerHTML = '<div class="small" style="padding:6px">Žádná historie</div>';
-            return;
-        }
-        list.forEach((item, index) => {
-            const standings = item.players.slice().sort((a, b) => b.score - a.score);
-            const maxScore = standings.length > 0 ? standings[0].score : 0;
-            const minScore = standings.length > 0 ? standings[standings.length - 1].score : 0;
-            const div = document.createElement('div');
-            div.className = 'history-item';
-            const when = new Date(item.when);
-            const content = document.createElement('div');
-            content.className = 'content';
-            const h = document.createElement('div');
-            h.className = 'small';
-            h.textContent = when.toLocaleString();
-            const listWrap = document.createElement('div');
-            const playerEntries = standings.map(p => {
-                let nameHtml = escapeHtml(p.name);
-                if (p.score === maxScore) nameHtml = `<span class="winner-text">${nameHtml}</span>`;
-                if (p.score === minScore && maxScore !== minScore) nameHtml = `<span class="loser-text">${nameHtml}</span>`;
-                return `${nameHtml} (${p.score})`;
-            });
-            listWrap.innerHTML = playerEntries.join(', ');
-            content.appendChild(h);
-            content.appendChild(listWrap);
-            div.appendChild(content);
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = '✕';
-            deleteBtn.title = 'Smazat tuto hru';
-            deleteBtn.addEventListener('click', () => deleteHistoryItem(index));
-            div.appendChild(deleteBtn);
-
-            historyEl.appendChild(div);
-        });
-    }
-
-    clearHistoryBtn.addEventListener('click', clearHistory);
-
-    addPlayerBtn.addEventListener('click', () => {
-        players.push(newPlayer('', 0));
+      const del = document.createElement('button');
+      del.className = 'del-x';
+      del.textContent = '✕';
+      del.title = 'Odstranit hráče';
+      del.addEventListener('click', () => {
+        players.splice(i, 1);
         renderPlayers();
         saveOngoing();
+      });
+
+      const handle = document.createElement('button');
+      handle.className = 'drag-handle';
+      handle.type = 'button';
+      handle.title = 'Přetáhni pro změnu pořadí';
+      handle.textContent = '≡';
+      handle.addEventListener('pointerdown', (e) => startDragPlayer(p.id, e));
+
+      row.appendChild(input);
+      row.appendChild(del);
+      row.appendChild(handle);
+      playersListEl.appendChild(row);
+    });
+  }
+
+  async function renderHistory() {
+    const list = loadHistory();
+    historyEl.innerHTML = '';
+    if (!list || list.length === 0) {
+      historyEl.innerHTML = '<div class="small" style="padding:6px">Žádná historie</div>';
+      return;
+    }
+    list.forEach((item, index) => {
+      const standings = item.players.slice().sort((a, b) => b.score - a.score);
+      const maxScore = standings.length > 0 ? standings[0].score : 0;
+      const minScore = standings.length > 0 ? standings[standings.length - 1].score : 0;
+
+      const div = document.createElement('div');
+      div.className = 'history-item';
+
+      const when = new Date(item.when);
+
+      const content = document.createElement('div');
+      content.className = 'content';
+
+      const h = document.createElement('div');
+      h.className = 'small';
+      h.textContent = when.toLocaleString();
+
+      const listWrap = document.createElement('div');
+      const playerEntries = standings.map(p => {
+        let nameHtml = escapeHtml(p.name);
+        if (p.score === maxScore) nameHtml = `<span class="winner-text">${nameHtml}</span>`;
+        if (p.score === minScore && maxScore !== minScore) nameHtml = `<span class="loser-text">${nameHtml}</span>`;
+        return `${nameHtml} (${p.score})`;
+      });
+      listWrap.innerHTML = playerEntries.join(', ');
+
+      content.appendChild(h);
+      content.appendChild(listWrap);
+      div.appendChild(content);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-btn';
+      deleteBtn.textContent = '✕';
+      deleteBtn.title = 'Smazat tuto hru';
+      deleteBtn.addEventListener('click', () => deleteHistoryItem(index));
+      div.appendChild(deleteBtn);
+
+      historyEl.appendChild(div);
+    });
+  }
+
+  clearHistoryBtn.addEventListener('click', clearHistory);
+
+  addPlayerBtn.addEventListener('click', () => {
+    players.push(newPlayer('', 0));
+    renderPlayers();
+    saveOngoing();
+  });
+
+  startGameBtn.addEventListener('click', () => {
+    let isValid = true;
+
+    const nameInputs = playersListEl.querySelectorAll('input');
+    nameInputs.forEach(input => input.classList.remove('invalid-input'));
+
+    const names = players.map(p => (p.name || '').trim().toLowerCase());
+    const nameCounts = {};
+    names.forEach(name => { nameCounts[name] = (nameCounts[name] || 0) + 1; });
+
+    nameInputs.forEach((input, i) => {
+      const name = (players[i].name || '').trim();
+      if (name === '') {
+        input.classList.add('invalid-input');
+        isValid = false;
+      }
+      if (nameCounts[name.toLowerCase()] > 1) {
+        input.classList.add('invalid-input');
+        isValid = false;
+      }
     });
 
-    startGameBtn.addEventListener('click', () => {
-        let isValid = true;
-        const nameInputs = playersListEl.querySelectorAll('input');
-        nameInputs.forEach(input => input.classList.remove('invalid-input'));
+    if (!isValid) return;
 
-        const names = players.map(p => (p.name || '').trim().toLowerCase());
-        const nameCounts = {};
-        names.forEach(name => { nameCounts[name] = (nameCounts[name] || 0) + 1; });
+    if (players.length < 2) {
+      alert('Přidej alespoň 2 hráče.');
+      return;
+    }
 
-        nameInputs.forEach((input, i) => {
-            const name = (players[i].name || '').trim();
-            if (name === '') {
-                input.classList.add('invalid-input');
-                isValid = false;
-            }
-            if (nameCounts[name.toLowerCase()] > 1) {
-                input.classList.add('invalid-input');
-                isValid = false;
-            }
-        });
-        if (!isValid) return;
-
-        if (players.length < 2) {
-            alert('Přidej alespoň 2 hráče.');
-            return;
-        }
-
-        players.forEach(p => {
-            p.score = 0;
-            p.temp = 0;
-            p.tempHistory = [];
-            p.name = (p.name || '').trim();
-        });
-
-        currentIndex = 0;
-        finalRoundActive = false;
-        finalStarterIndex = null;
-        turnScores = players.map(() => null);
-        localStorage.removeItem(GAME_KEY);
-        applyBtn.disabled = false;
-        showGame();
+    players.forEach(p => {
+      p.score = 0;
+      p.temp = 0;
+      p.tempHistory = [];
+      p.name = (p.name || '').trim();
     });
 
-    function showGame() {
-        pageHome.style.display = 'none';
-        pageGame.style.display = 'block';
-        renderPlayerCard();
-        renderStandings();
+    currentIndex = 0;
+    finalRoundActive = false;
+    finalStarterIndex = null;
+    turnScores = players.map(() => null);
+
+    localStorage.removeItem(GAME_KEY);
+    applyBtn.disabled = false;
+    showGame();
+  });
+
+  function showGame() {
+    pageHome.style.display = 'none';
+    pageGame.style.display = 'block';
+    renderPlayerCard();
+    renderStandings();
+  }
+
+  function showHome() {
+    document.body.style.padding = '16px';
+    pageGame.style.display = 'none';
+    pageHome.style.display = 'block';
+    renderHistory();
+  }
+
+  function computeRanks() {
+    const arr = players.map((p, i) => ({ i, score: p.score })).sort((a, b) => b.score - a.score);
+    const ranks = {};
+    let pos = 1;
+    for (let k = 0; k < arr.length;) {
+      let j = k + 1;
+      while (j < arr.length && arr[j].score === arr[k].score) j++;
+      const label = (j - k === 1) ? String(pos) : `${pos}-${pos + (j - k) - 1}`;
+      for (let t = k; t < j; t++) ranks[arr[t].i] = label;
+      pos += (j - k);
+      k = j;
+    }
+    return ranks;
+  }
+
+  function renderMiniStandings() {
+    miniStandingsEl.innerHTML = '';
+    if (players.length === 0) return;
+
+    const sorted = players.map((p, idx) => ({ p, idx })).sort((a, b) => b.p.score - a.p.score);
+    const maxScore = sorted[0].p.score;
+    const minScore = sorted[sorted.length - 1].p.score;
+
+    const nameSpans = [];
+
+    let pos = 1;
+    for (let k = 0; k < sorted.length;) {
+      let j = k + 1;
+      while (j < sorted.length && sorted[j].p.score === sorted[k].p.score) j++;
+
+      for (let t = k; t < j; t++) {
+        const originalIndex = sorted[t].idx;
+        const p = sorted[t].p;
+
+        const item = document.createElement('div');
+        item.className = 'mini-item';
+
+        if (originalIndex === currentIndex) item.classList.add('current');
+        else if (turnScores[originalIndex] !== null) item.classList.add('scored');
+
+        if (p.score === maxScore && players.filter(pl => pl.score === maxScore).length === 1) item.classList.add('gold');
+        else if (p.score === minScore && players.filter(pl => pl.score === minScore).length === 1 && maxScore !== minScore) item.classList.add('danger');
+
+        const r = document.createElement('span');
+        r.className = 'mini-rank';
+        r.textContent = '#' + pos;
+
+        const n = document.createElement('span');
+        n.className = 'mini-name';
+        n.textContent = (p.name || '').trim() || 'Hráč';
+
+        const s = document.createElement('span');
+        s.className = 'mini-score';
+        s.textContent = p.score;
+
+        item.appendChild(r);
+        item.appendChild(n);
+        item.appendChild(s);
+
+        miniStandingsEl.appendChild(item);
+        nameSpans.push(n);
+      }
+
+      pos += (j - k);
+      k = j;
     }
 
-    function showHome() {
-        document.body.style.padding = '16px';
-        pageGame.style.display = 'none';
-        pageHome.style.display = 'block';
-        renderHistory();
+    // Zkracování jmen jen pokud se to nevejde, bez teček a bez tří teček.
+    // Ubíráme vždy poslední znak z aktuálně nejdelšího jména, dokud se to vejde,
+    // nebo dokud nemají všechna jména délku 1.
+    let safety = 0;
+    while (miniStandingsEl.scrollWidth > miniStandingsEl.clientWidth && safety < 5000) {
+      let idx = -1;
+      let longest = 1;
+      for (let i = 0; i < nameSpans.length; i++) {
+        const len = nameSpans[i].textContent.length;
+        if (len > longest) { longest = len; idx = i; }
+      }
+      if (idx === -1) break;
+      nameSpans[idx].textContent = nameSpans[idx].textContent.slice(0, -1);
+      safety++;
+    }
+  }
+
+  function renderPlayerCard() {
+    if (players.length === 0) return;
+    const p = players[currentIndex];
+
+    const ranks = computeRanks();
+    const rankLabel = ranks[currentIndex] ? `#${ranks[currentIndex]}` : '';
+    playerNameEl.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="rank"> ${rankLabel}</span>`;
+
+    const temp = (p.temp || 0);
+    mainScoreEl.textContent = p.score;
+    tempScoreEl.textContent = '+' + temp;
+
+    // předpokládaný součet (skóre + plánované přidání)
+    predictedScoreEl.textContent = 'Po zápisu: ' + (p.score + temp);
+
+    const maxScore = Math.max(...players.map(x => x.score));
+    const minScore = Math.min(...players.map(x => x.score));
+
+    playerNameEl.classList.remove('first-place', 'last-place');
+
+    if (p.score === maxScore && players.filter(x => x.score === maxScore).length === 1 && players.length > 1) {
+      playerNameEl.classList.add('first-place');
+    }
+    if (p.score === minScore && players.filter(x => x.score === minScore).length === 1 && players.length > 1 && maxScore !== minScore) {
+      playerNameEl.classList.add('last-place');
     }
 
-    function computeRanks() {
-        const arr = players.map((p, i) => ({ i, score: p.score })).sort((a, b) => b.score - a.score);
-        const ranks = {};
-        let pos = 1;
-        for (let k = 0; k < arr.length;) {
-            let j = k + 1;
-            while (j < arr.length && arr[j].score === arr[k].score) j++;
-            const label = (j - k === 1) ? String(pos) : `${pos}-${pos + (j - k) - 1}`;
-            for (let t = k; t < j; t++) ranks[arr[t].i] = label;
-            pos += (j - k);
-            k = j;
-        }
-        return ranks;
+    const target = Number(targetScoreInput.value) || 4000;
+    gameInterfaceEl.classList.toggle('is-winner-card', p.score >= target);
+  }
+
+  function renderStandings() {
+    renderMiniStandings();
+    if (standingsListEl) standingsListEl.innerHTML = '';
+  }
+
+  playerNameEl.addEventListener('click', () => {
+    const p = players[currentIndex];
+    const newName = prompt(`Přejmenovat hráče ${p.name}:`, p.name);
+    if (newName === null) return;
+
+    const cleaned = newName.trim();
+    if (!cleaned) {
+      alert('Jméno nesmí být prázdné.');
+      return;
+    }
+    if (isDuplicateName(cleaned, p.id)) {
+      alert('Tohle jméno už existuje. Zvol jiné.');
+      return;
     }
 
-    function initialForName(name) {
-        const t = (name || '').trim();
-        if (!t) return '?';
-        return t[0].toUpperCase();
-    }
+    p.name = cleaned;
+    renderPlayerCard();
+    renderStandings();
+    saveOngoing();
+  });
 
-    function renderMiniStandings() {
-        if (!miniStandingsEl) return;
-        miniStandingsEl.innerHTML = '';
-        if (players.length === 0) return;
-
-        // seřazení pro pořadí podle skóre
-        const sorted = players
-            .map((p, idx) => ({ p, idx }))
-            .sort((a, b) => b.p.score - a.p.score);
-
-        const maxScore = sorted[0].p.score;
-        const minScore = sorted[sorted.length - 1].p.score;
-
-        // ranking s ties (1,1,3...)
-        let pos = 1;
-        for (let k = 0; k < sorted.length;) {
-            let j = k + 1;
-            while (j < sorted.length && sorted[j].p.score === sorted[k].p.score) j++;
-
-            for (let t = k; t < j; t++) {
-                const originalIndex = sorted[t].idx;
-                const p = sorted[t].p;
-
-                const item = document.createElement('div');
-                item.className = 'mini-item';
-
-                if (originalIndex === currentIndex) item.classList.add('current');
-                else if (turnScores[originalIndex] !== null) item.classList.add('scored');
-
-                if (p.score === maxScore && players.filter(pl => pl.score === maxScore).length === 1) item.classList.add('gold');
-                else if (p.score === minScore && players.filter(pl => pl.score === minScore).length === 1 && maxScore !== minScore) item.classList.add('danger');
-
-                const r = document.createElement('span');
-                r.className = 'mini-rank';
-                r.textContent = '#' + pos;
-
-                const n = document.createElement('span');
-                n.className = 'mini-initial';
-                n.textContent = initialForName(p.name) + '.';
-
-                const s = document.createElement('span');
-                s.className = 'mini-score';
-                s.textContent = p.score;
-
-                item.appendChild(r);
-                item.appendChild(n);
-                item.appendChild(s);
-
-                miniStandingsEl.appendChild(item);
-            }
-
-            pos += (j - k);
-            k = j;
-        }
-    }
-
-    function renderPlayerCard() {
-        if (players.length === 0) return;
-        const p = players[currentIndex];
-        const ranks = computeRanks();
-        const rankLabel = ranks[currentIndex] ? `#${ranks[currentIndex]}` : '';
-        playerNameEl.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="rank"> ${rankLabel}</span>`;
-        mainScoreEl.textContent = p.score;
-        tempScoreEl.textContent = '+' + (p.temp || 0);
-
-        const maxScore = Math.max(...players.map(x => x.score));
-        const minScore = Math.min(...players.map(x => x.score));
-        playerNameEl.classList.remove('first-place', 'last-place');
-
-        if (p.score === maxScore && players.filter(x => x.score === maxScore).length === 1 && players.length > 1) {
-            playerNameEl.classList.add('first-place');
-        }
-        if (p.score === minScore && players.filter(x => x.score === minScore).length === 1 && players.length > 1 && maxScore !== minScore) {
-            playerNameEl.classList.add('last-place');
-        }
-
-        const target = Number(targetScoreInput.value) || 4000;
-        gameInterfaceEl.classList.toggle('is-winner-card', p.score >= target);
-    }
-
-    function renderStandings() {
-        // Mini žebříček nahoře
-        renderMiniStandings();
-
-        // Původní (vertikální) žebříček nechán kompatibilně, ale je schovaný CSSem
-        standingsListEl.innerHTML = '';
-        if (players.length === 0) return;
-
-        const sortedPlayers = players
-            .map((p, index) => ({ ...p, originalIndex: index }))
-            .sort((a, b) => b.score - a.score);
-
-        const maxScore = sortedPlayers[0].score;
-        const minScore = sortedPlayers[sortedPlayers.length - 1].score;
-
-        sortedPlayers.forEach((p, rank) => {
-            const row = document.createElement('div');
-            row.className = 'standings-row';
-            row.classList.remove('current-player-row', 'player-scored-row');
-
-            if (p.originalIndex === currentIndex) row.classList.add('current-player-row');
-            else if (turnScores[p.originalIndex] !== null) row.classList.add('player-scored-row');
-
-            const info = document.createElement('div');
-            info.className = 'standings-info';
-
-            let rankHtml = `#${rank + 1} `;
-            let nameHtml = escapeHtml(p.name);
-
-            if (p.score === maxScore && players.filter(pl => pl.score === maxScore).length === 1) {
-                rankHtml = `<span class="gold-text">${rankHtml}</span>`;
-                nameHtml = `<span class="gold-text">${nameHtml}</span>`;
-            } else if (p.score === minScore && players.filter(pl => pl.score === minScore).length === 1 && maxScore !== minScore) {
-                rankHtml = `<span class="danger-text">${rankHtml}</span>`;
-                nameHtml = `<span class="danger-text">${nameHtml}</span>`;
-            }
-
-            info.innerHTML = rankHtml + nameHtml;
-
-            const score = document.createElement('div');
-            score.className = 'standings-score';
-            score.textContent = p.score;
-
-            row.appendChild(info);
-            row.appendChild(score);
-            standingsListEl.appendChild(row);
-        });
-    }
-
-    // Klik na jméno hráče = přejmenování (stejně jako skóre)
-    playerNameEl.addEventListener('click', () => {
-        const p = players[currentIndex];
-        const newName = prompt(`Přejmenovat hráče ${p.name}:`, p.name);
-        if (newName === null) return;
-
-        const cleaned = newName.trim();
-        if (!cleaned) {
-            alert('Jméno nesmí být prázdné.');
-            return;
-        }
-        if (isDuplicateName(cleaned, p.id)) {
-            alert('Tohle jméno už existuje. Zvol jiné.');
-            return;
-        }
-        p.name = cleaned;
-        renderPlayerCard();
-        renderStandings();
-        saveOngoing();
-    });
-
-    mainScoreEl.addEventListener('click', () => {
-        const p = players[currentIndex];
-        const newScore = prompt(`Zadejte nové skóre pro ${p.name}:`, p.score);
-        if (newScore !== null) {
-            const parsedScore = parseInt(newScore, 10);
-            if (!isNaN(parsedScore)) {
-                p.score = parsedScore;
-                p.temp = 0;
-                p.tempHistory = [];
-                renderPlayerCard();
-                renderStandings();
-                saveOngoing();
-            } else {
-                alert('Zadána neplatná hodnota. Zadejte prosím číslo.');
-            }
-        }
-    });
-
-    document.querySelectorAll('.btn-score').forEach(b => {
-        b.addEventListener('click', () => {
-            const v = Number(b.dataset.val);
-            const p = players[currentIndex];
-            p.temp = (p.temp || 0) + v;
-            p.tempHistory = p.tempHistory || [];
-            p.tempHistory.push(v);
-            renderPlayerCard();
-            saveOngoing();
-        });
-    });
-
-    undoBtn.addEventListener('click', () => {
-        const p = players[currentIndex];
-        p.tempHistory = p.tempHistory || [];
-        if (p.tempHistory.length === 0) return;
-        const last = p.tempHistory.pop();
-        p.temp = (p.temp || 0) - last;
-        renderPlayerCard();
-        saveOngoing();
-    });
-
-    applyBtn.addEventListener('click', () => {
-        applyBtn.disabled = true;
-        const p = players[currentIndex];
-        const delta = p.temp || 0;
-        p.score += delta;
-        turnScores[currentIndex] = p.score;
+  mainScoreEl.addEventListener('click', () => {
+    const p = players[currentIndex];
+    const newScore = prompt(`Zadejte nové skóre pro ${p.name}:`, p.score);
+    if (newScore !== null) {
+      const parsedScore = parseInt(newScore, 10);
+      if (!isNaN(parsedScore)) {
+        p.score = parsedScore;
         p.temp = 0;
         p.tempHistory = [];
-
-        mainScoreEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], {
-            duration: 320,
-            iterations: 1
-        });
-
-        renderPlayerCard();
-        renderStandings();
-
-        setTimeout(() => {
-            const target = Number(targetScoreInput.value) || 4000;
-            if (p.score >= target && !finalRoundActive) {
-                finalRoundActive = true;
-                finalStarterIndex = currentIndex;
-            }
-
-            if (finalRoundActive) {
-                const isLastTurn = currentIndex === players.length - 1;
-                if (isLastTurn) {
-                    endGameByStandings();
-                    return;
-                }
-            }
-
-            let nextIndex = (currentIndex + 1) % players.length;
-            let fullRound = true;
-            for (let i = 0; i < players.length; i++) {
-                if (turnScores[i] === null) { fullRound = false; break; }
-            }
-
-            if (fullRound) {
-                turnScores = players.map(() => null);
-                nextIndex = (currentIndex + 1) % players.length;
-            }
-
-            currentIndex = nextIndex;
-            renderPlayerCard();
-            renderStandings();
-            saveOngoing();
-            applyBtn.disabled = false;
-        }, 600);
-    });
-
-    endBtn.addEventListener('click', endGameByStandings);
-
-    prevBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex - 1 + players.length) % players.length;
         renderPlayerCard();
         renderStandings();
         saveOngoing();
-    });
-
-    nextBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex + 1) % players.length;
-        renderPlayerCard();
-        renderStandings();
-        saveOngoing();
-    });
-
-    async function endGameByStandings() {
-        const standings = players.map(p => ({
-            name: p.name || 'Hráč',
-            score: Number(p.score || 0)
-        })).sort((a, b) => b.score - a.score);
-
-        const target = Number(targetScoreInput.value) || 4000;
-        const winners = standings.filter(p => p.score >= target);
-
-        await saveHistory({ when: new Date().toISOString(), players: standings, winners: winners.map(w => w.name) });
-
-        localStorage.removeItem(GAME_KEY);
-        finalRoundActive = false;
-        finalStarterIndex = null;
-        turnScores = [];
-        showEndModal(standings);
+      } else {
+        alert('Zadána neplatná hodnota. Zadejte prosím číslo.');
+      }
     }
+  });
 
-    function showEndModal(standings) {
-        placementsEl.innerHTML = '';
-        const target = Number(targetScoreInput.value) || 4000;
-        const minScore = standings.length > 0 ? standings[standings.length - 1].score : 0;
-
-        standings.forEach((s, i) => {
-            const d = document.createElement('div');
-            d.className = 'placement';
-
-            const name = document.createElement('div');
-            name.className = 'name';
-
-            const score = document.createElement('div');
-            score.textContent = s.score;
-
-            let nameHtml = `#${i + 1} ${escapeHtml(s.name)}`;
-            if (s.score >= target) {
-                name.innerHTML = `<span class="winner-text">${nameHtml}</span>`;
-            } else if (s.score === minScore) {
-                name.innerHTML = `<span class="loser-text">${nameHtml}</span>`;
-            } else {
-                name.innerHTML = nameHtml;
-            }
-
-            d.appendChild(name);
-            d.appendChild(score);
-            placementsEl.appendChild(d);
-        });
-
-        const winners = standings.filter(p => p.score >= target);
-        if (winners.length > 1) {
-            endTitle.textContent = `Vítězové: ${winners.map(w => w.name).join(', ')}`;
-        } else if (winners.length === 1) {
-            endTitle.textContent = `Vítěz: ${winners[0].name} — ${winners[0].score} bodů`;
-        } else {
-            endTitle.textContent = `Hra skončila bez vítěze`;
-        }
-
-        endModal.style.display = 'block';
-    }
-
-    closeModal.addEventListener('click', () => {
-        endModal.style.display = 'none';
-        players.forEach(p => {
-            p.score = 0;
-            p.temp = 0;
-            p.tempHistory = [];
-        });
-        currentIndex = 0;
-        turnScores = [];
-        renderPlayers();
-        showHome();
+  document.querySelectorAll('.btn-score').forEach(b => {
+    b.addEventListener('click', () => {
+      const v = Number(b.dataset.val);
+      const p = players[currentIndex];
+      p.temp = (p.temp || 0) + v;
+      p.tempHistory = p.tempHistory || [];
+      p.tempHistory.push(v);
+      renderPlayerCard();
+      saveOngoing();
     });
+  });
 
-    function escapeHtml(text) {
-        return String(text).replace(/[&<>"']/g, (m) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        }[m]));
-    }
+  undoBtn.addEventListener('click', () => {
+    const p = players[currentIndex];
+    p.tempHistory = p.tempHistory || [];
+    if (p.tempHistory.length === 0) return;
+    const last = p.tempHistory.pop();
+    p.temp = (p.temp || 0) - last;
+    renderPlayerCard();
+    saveOngoing();
+  });
 
-    (async function init() {
-        const ongoing = loadOngoing();
-        if (ongoing && ongoing.players && ongoing.players.length >= 2) {
-            if (confirm('Načíst rozdělanou hru?')) {
-                players = ongoing.players.map(p => ({
-                    id: p.id || makeId(),
-                    name: p.name || '',
-                    score: Number(p.score || 0),
-                    temp: 0,
-                    tempHistory: []
-                }));
-                currentIndex = ongoing.currentIndex || 0;
-                targetScoreInput.value = ongoing.target || 4000;
-                finalRoundActive = ongoing.finalRoundActive || false;
-                finalStarterIndex = ongoing.finalStarterIndex !== null ? ongoing.finalStarterIndex : null;
-                turnScores = ongoing.turnScores || players.map(() => null);
-                renderPlayers();
-                showGame();
-                return;
-            } else {
-                localStorage.removeItem(GAME_KEY);
-            }
+  applyBtn.addEventListener('click', () => {
+    applyBtn.disabled = true;
+
+    const p = players[currentIndex];
+    const delta = p.temp || 0;
+
+    p.score += delta;
+    turnScores[currentIndex] = p.score;
+
+    p.temp = 0;
+    p.tempHistory = [];
+
+    mainScoreEl.animate(
+      [{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }],
+      { duration: 320, iterations: 1 }
+    );
+
+    renderPlayerCard();
+    renderStandings();
+
+    setTimeout(() => {
+      const target = Number(targetScoreInput.value) || 4000;
+      if (p.score >= target && !finalRoundActive) {
+        finalRoundActive = true;
+        finalStarterIndex = currentIndex;
+      }
+
+      if (finalRoundActive) {
+        const isLastTurn = currentIndex === players.length - 1;
+        if (isLastTurn) {
+          endGameByStandings();
+          return;
         }
+      }
 
-        if (players.length === 0) {
-            players = [newPlayer('', 0), newPlayer('', 0)];
-        } else {
-            // kdyby někdo měl staré položky bez id
-            players = players.map(p => ({ ...p, id: p.id || makeId() }));
-        }
+      let nextIndex = (currentIndex + 1) % players.length;
 
+      let fullRound = true;
+      for (let i = 0; i < players.length; i++) {
+        if (turnScores[i] === null) { fullRound = false; break; }
+      }
+
+      if (fullRound) {
         turnScores = players.map(() => null);
+        nextIndex = (currentIndex + 1) % players.length;
+      }
+
+      currentIndex = nextIndex;
+      renderPlayerCard();
+      renderStandings();
+      saveOngoing();
+
+      applyBtn.disabled = false;
+    }, 600);
+  });
+
+  endBtn.addEventListener('click', endGameByStandings);
+
+  prevBtn.addEventListener('click', () => {
+    currentIndex = (currentIndex - 1 + players.length) % players.length;
+    renderPlayerCard();
+    renderStandings();
+    saveOngoing();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    currentIndex = (currentIndex + 1) % players.length;
+    renderPlayerCard();
+    renderStandings();
+    saveOngoing();
+  });
+
+  async function endGameByStandings() {
+    const standings = players.map(p => ({
+      name: p.name || 'Hráč',
+      score: Number(p.score || 0)
+    })).sort((a, b) => b.score - a.score);
+
+    const target = Number(targetScoreInput.value) || 4000;
+    const winners = standings.filter(p => p.score >= target);
+
+    await saveHistory({ when: new Date().toISOString(), players: standings, winners: winners.map(w => w.name) });
+
+    localStorage.removeItem(GAME_KEY);
+    finalRoundActive = false;
+    finalStarterIndex = null;
+    turnScores = [];
+    showEndModal(standings);
+  }
+
+  function showEndModal(standings) {
+    placementsEl.innerHTML = '';
+    const target = Number(targetScoreInput.value) || 4000;
+    const minScore = standings.length > 0 ? standings[standings.length - 1].score : 0;
+
+    standings.forEach((s, i) => {
+      const d = document.createElement('div');
+      d.className = 'placement';
+
+      const name = document.createElement('div');
+      name.className = 'name';
+
+      const score = document.createElement('div');
+      score.textContent = s.score;
+
+      let nameHtml = `#${i + 1} ${escapeHtml(s.name)}`;
+      if (s.score >= target) {
+        name.innerHTML = `<span class="winner-text">${nameHtml}</span>`;
+      } else if (s.score === minScore) {
+        name.innerHTML = `<span class="loser-text">${nameHtml}</span>`;
+      } else {
+        name.innerHTML = nameHtml;
+      }
+
+      d.appendChild(name);
+      d.appendChild(score);
+      placementsEl.appendChild(d);
+    });
+
+    const winners = standings.filter(p => p.score >= target);
+    if (winners.length > 1) {
+      endTitle.textContent = `Vítězové: ${winners.map(w => w.name).join(', ')}`;
+    } else if (winners.length === 1) {
+      endTitle.textContent = `Vítěz: ${winners[0].name} — ${winners[0].score} bodů`;
+    } else {
+      endTitle.textContent = `Hra skončila bez vítěze`;
+    }
+
+    endModal.style.display = 'block';
+  }
+
+  closeModal.addEventListener('click', () => {
+    endModal.style.display = 'none';
+    players.forEach(p => {
+      p.score = 0;
+      p.temp = 0;
+      p.tempHistory = [];
+    });
+    currentIndex = 0;
+    turnScores = [];
+    renderPlayers();
+    showHome();
+  });
+
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[m]));
+  }
+
+  (async function init() {
+    const ongoing = loadOngoing();
+    if (ongoing && ongoing.players && ongoing.players.length >= 2) {
+      if (confirm('Načíst rozdělanou hru?')) {
+        players = ongoing.players.map(p => ({
+          id: p.id || makeId(),
+          name: p.name || '',
+          score: Number(p.score || 0),
+          temp: 0,
+          tempHistory: []
+        }));
+        currentIndex = ongoing.currentIndex || 0;
+        targetScoreInput.value = ongoing.target || 4000;
+        finalRoundActive = ongoing.finalRoundActive || false;
+        finalStarterIndex = ongoing.finalStarterIndex !== null ? ongoing.finalStarterIndex : null;
+        turnScores = ongoing.turnScores || players.map(() => null);
         renderPlayers();
-        await renderHistory();
-    })();
+        showGame();
+        return;
+      } else {
+        localStorage.removeItem(GAME_KEY);
+      }
+    }
+
+    if (players.length === 0) {
+      players = [newPlayer('', 0), newPlayer('', 0)];
+    } else {
+      players = players.map(p => ({ ...p, id: p.id || makeId() }));
+    }
+
+    turnScores = players.map(() => null);
+    renderPlayers();
+    await renderHistory();
+  })();
 </script>
 </body>
 </html>
