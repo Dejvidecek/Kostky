@@ -164,7 +164,7 @@
     .drag-handle {
       background: transparent;
       border: 0;
-      color: var(--danger);
+      color: var(--muted);
       font-weight: 800;
       font-size: 18px;
       cursor: grab;
@@ -427,8 +427,7 @@
         <div class="row" style="justify-content:space-between; align-items:baseline;">
           <label>Hráči</label>
           <div class="small" style="text-align:right; line-height:1.2;">
-            <div>Min. hráči</div>
-            <div style="text-align:right;margin-top:4px">2+</div>
+            <div style="text-align:right;margin-top:4px">Min. hráči 2+</div>
           </div>
         </div>
 
@@ -479,7 +478,7 @@
         <div class="action-buttons-3col">
           <button id="endBtn" class="full-width-btn btn-end">Konec</button>
           <button id="applyBtn" class="full-width-btn btn-apply">Zapsat</button>
-          <button id="undoBtn" class="full-width-btn btn-undo">Zpět</button>
+          <button id="undoBtn" class="full-width-btn btn-undo">Vrátit</button>
         </div>
 
         <div class="nav-buttons">
@@ -937,7 +936,7 @@
     tempScoreEl.textContent = '+' + temp;
 
     // předpokládaný součet (skóre + plánované přidání)
-    predictedScoreEl.textContent = 'Po zápisu: ' + (p.score + temp);
+    predictedScoreEl.textContent = (p.score + temp);
 
     const maxScore = Math.max(...players.map(x => x.score));
     const minScore = Math.min(...players.map(x => x.score));
