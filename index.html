@@ -19,9 +19,7 @@
             --radius: 12px;
         }
 
-        * {
-            box-sizing: border-box
-        }
+        * { box-sizing: border-box }
 
         html, body {
             height: 100%;
@@ -36,10 +34,7 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        .app {
-            max-width: 980px;
-            margin: 0 auto
-        }
+        .app { max-width: 980px; margin: 0 auto }
 
         .card {
             background: var(--card);
@@ -49,14 +44,9 @@
             margin: 16px;
         }
 
-        h1, h2 {
-            margin: 0
-        }
+        h1, h2 { margin: 0 }
 
-        label {
-            color: var(--muted);
-            font-size: 13px;
-        }
+        label { color: var(--muted); font-size: 13px; }
 
         .row {
             display: flex;
@@ -89,16 +79,17 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            user-select: none;
         }
 
-        .player-row input {
-            flex: 1;
+        .player-row input { flex: 1; }
+
+        .player-row.dragging {
+            opacity: 0.72;
+            transform: scale(0.99);
         }
 
-        .small {
-            font-size: 13px;
-            color: var(--muted);
-        }
+        .small { font-size: 13px; color: var(--muted); }
 
         .btn {
             padding: 10px 12px;
@@ -138,9 +129,7 @@
             line-height: 1.5;
         }
 
-        .history-item .content {
-            flex: 1;
-        }
+        .history-item .content { flex: 1; }
 
         .history-item .delete-btn {
             margin-left: 10px;
@@ -151,26 +140,35 @@
             cursor: pointer;
         }
 
-        .winner-text {
-            color: var(--winner-gold);
-            font-weight: 700;
-        }
+        .winner-text { color: var(--winner-gold); font-weight: 700; }
+        .loser-text { color: var(--danger); font-weight: 700; }
 
-        .loser-text {
-            color: var(--danger);
-            font-weight: 700;
+        /* --- Drag handle v menu hráčů --- */
+        .drag-handle {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            border: 1px solid #e6e9ef;
+            background: #f7f8fa;
+            color: #334155;
+            font-weight: 800;
+            cursor: grab;
+            touch-action: none; /* důležité pro mobile drag */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            line-height: 1;
         }
+        .drag-handle:active { cursor: grabbing; }
 
-        /* Nové styly pro herní obrazovku */
-        #page-game {
-            margin-top: 0;
-            padding: 0;
-        }
+        /* --- Herní obrazovka --- */
+        #page-game { margin-top: 0; padding: 0; }
 
         .game-interface {
-            height: 100vh;
+            height: 100dvh;
             background: var(--surface);
-            padding: 16px;
+            padding: 12px 14px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -178,81 +176,107 @@
         }
 
         .player-info {
-            padding-top: 2vh;
-            font-size: 24px;
-            padding-bottom: 24px;
+            padding-top: 1vh;
+            padding-bottom: 12px;
         }
+
+        /* Mini žebříček (horizontálně) */
+        .mini-standings {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 6px 0 10px;
+            margin-bottom: 4px;
+        }
+        .mini-standings::-webkit-scrollbar { height: 0; }
+
+        .mini-item {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 999px;
+            background: #f3f6f9;
+            border: 1px solid #e6e9ef;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .mini-item.current { background: #dbeafe; font-weight: 800; }
+        .mini-item.scored { background: #dcfce7; font-weight: 700; }
+
+        .mini-rank { color: var(--muted); font-weight: 800; min-width: 18px; text-align: left; }
+        .mini-initial { font-weight: 800; }
+        .mini-score { font-weight: 900; }
+
+        .mini-item.gold .mini-rank,
+        .mini-item.gold .mini-initial,
+        .mini-item.gold .mini-score { color: var(--winner-gold); }
+
+        .mini-item.danger .mini-rank,
+        .mini-item.danger .mini-initial,
+        .mini-item.danger .mini-score { color: var(--danger); }
 
         .player-name {
             font-size: 32px;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             color: var(--text);
             transition: color .3s ease;
+            cursor: pointer;
         }
 
-        .player-name.first-place {
-            color: var(--accent);
-        }
-
-        .player-name.last-place {
-            color: var(--danger);
-        }
+        .player-name.first-place { color: var(--accent); }
+        .player-name.last-place { color: var(--danger); }
 
         .player-name .rank {
             font-weight: 600;
-            font-size: 28px;
+            font-size: 22px;
             color: var(--muted);
             margin-left: 8px;
         }
 
         .score-area {
             display: flex;
-            gap: 14px;
+            gap: 12px;
             align-items: center;
             justify-content: center;
         }
 
         .main-score {
-            font-size: 64px;
+            font-size: 60px;
             font-weight: 800;
-            padding: 14px 22px;
+            padding: 12px 18px;
             border-radius: 12px;
             background: #fbfdff;
-            min-width: 160px;
+            min-width: 150px;
             text-align: center;
             box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.03);
             cursor: pointer;
         }
 
         .temp-score {
-            font-size: 32px;
+            font-size: 30px;
             font-weight: 600;
             color: #334155;
             padding: 10px 14px;
             border-radius: 12px;
             background: #f3f6f9;
-            min-width: 110px;
+            min-width: 105px;
             text-align: center;
         }
 
-        .is-winner-card {
-            background: var(--winner-bg) !important;
-        }
+        .is-winner-card { background: var(--winner-bg) !important; }
 
-        /* Nové rozložení tlačítek */
         .button-container {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            padding-bottom: 2vh;
+            gap: 10px;
+            padding-bottom: 1vh;
         }
 
-        .score-buttons, .action-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
+        .score-buttons, .action-buttons { display: flex; flex-direction: column; gap: 10px; }
 
         .action-buttons-3col {
             display: grid;
@@ -260,25 +284,14 @@
             gap: 10px;
         }
 
-        .action-buttons-3col #applyBtn {
-            grid-column: 2;
-            grid-row: 1;
-        }
-
-        .action-buttons-3col #undoBtn {
-            grid-column: 3;
-            grid-row: 1;
-        }
-
-        .action-buttons-3col #endBtn {
-            grid-column: 1;
-            grid-row: 1;
-        }
+        .action-buttons-3col #applyBtn { grid-column: 2; grid-row: 1; }
+        .action-buttons-3col #undoBtn  { grid-column: 3; grid-row: 1; }
+        .action-buttons-3col #endBtn   { grid-column: 1; grid-row: 1; }
 
         .full-width-btn {
             width: 100%;
-            padding: 24px;
-            font-size: 22px;
+            padding: 20px;
+            font-size: 20px;
             font-weight: 700;
             border: 0;
             border-radius: 12px;
@@ -287,43 +300,25 @@
             transition: transform .1s ease;
         }
 
-        .full-width-btn:active {
-            transform: translateY(1px) scale(0.99);
-        }
+        .full-width-btn:active { transform: translateY(1px) scale(0.99); }
 
-        .btn-score {
-            background-color: var(--accent);
-            color: white;
-        }
-
-        .btn-apply {
-            background-color: var(--accent);
-            color: white;
-        }
-
-        .btn-undo {
-            background-color: #eef2f6;
-            color: var(--text);
-            border: 1px solid #d7e1ea;
-        }
-
-        .btn-end {
-            background-color: var(--danger);
-            color: white;
-        }
+        .btn-score { background-color: var(--accent); color: white; }
+        .btn-apply { background-color: var(--accent); color: white; }
+        .btn-undo  { background-color: #eef2f6; color: var(--text); border: 1px solid #d7e1ea; }
+        .btn-end   { background-color: var(--danger); color: white; }
 
         .nav-buttons {
             display: flex;
             gap: 0;
             width: 100%;
-            margin-top: 12px;
+            margin-top: 8px;
         }
 
         .btn-nav {
             flex: 1;
-            padding: 24px;
+            padding: 20px;
             border-radius: 12px;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
             border: 0;
             cursor: pointer;
@@ -342,20 +337,10 @@
             border-bottom-left-radius: 0;
         }
 
-        /* Žebříček */
-        .player-standings {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 16px;
-        }
+        /* Původní velký žebříček dole schován – teď je nahoře v mini verzi */
+        .player-standings { display: none; }
 
-        .standings-wrapper {
-            width: 100%;
-            max-width: 500px;
-        }
+        .standings-wrapper { width: 100%; max-width: 500px; }
 
         .standings-row {
             display: flex;
@@ -369,34 +354,14 @@
             transition: background-color 0.3s;
         }
 
-        .standings-row.current-player-row {
-            background-color: #dbeafe; /* Modrá */
-            font-weight: 700;
-        }
+        .standings-row.current-player-row { background-color: #dbeafe; font-weight: 700; }
+        .standings-row.player-scored-row  { background-color: #dcfce7; font-weight: 600; }
 
-        .standings-row.player-scored-row {
-            background-color: #dcfce7; /* Zelená */
-            font-weight: 600;
-        }
+        .standings-info { font-size: 18px; }
+        .standings-score { font-size: 20px; font-weight: 700; }
 
-        .standings-info {
-            font-size: 18px;
-        }
-
-        .standings-score {
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .standings-info .gold-text {
-            color: var(--winner-gold);
-            font-weight: 700;
-        }
-
-        .standings-info .danger-text {
-            color: var(--danger);
-            font-weight: 700;
-        }
+        .standings-info .gold-text { color: var(--winner-gold); font-weight: 700; }
+        .standings-info .danger-text { color: var(--danger); font-weight: 700; }
 
         .del-x {
             background: transparent;
@@ -439,9 +404,7 @@
             box-shadow: 0 20px 60px rgba(2, 6, 23, 0.2);
         }
 
-        .modal h3 {
-            margin: 0 0 8px;
-        }
+        .modal h3 { margin: 0 0 8px; }
 
         .placement {
             display: flex;
@@ -450,12 +413,25 @@
             border-bottom: 1px dashed #e6e9ef;
         }
 
-        .placement .name {
-            font-weight: 700;
-        }
+        .placement .name { font-weight: 700; }
+        .placement:last-child { border-bottom: none; }
 
-        .placement:last-child {
-            border-bottom: none;
+        /* Mobile/nižší displeje: ušetřit výšku */
+        @media (max-width: 480px), (max-height: 760px) {
+            .game-interface { padding: 10px 12px; }
+            .player-name { font-size: 28px; margin-bottom: 8px; }
+            .player-name .rank { font-size: 20px; }
+            .main-score { font-size: 48px; min-width: 136px; padding: 10px 14px; }
+            .temp-score { font-size: 24px; min-width: 96px; padding: 8px 10px; }
+
+            .score-buttons {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .full-width-btn { padding: 14px; font-size: 18px; }
+            .btn-nav { padding: 14px; font-size: 18px; }
         }
     </style>
 </head>
@@ -465,13 +441,17 @@
         <div class="card">
             <h1>Farkle — počítadlo skóre</h1>
             <div style="margin-top:12px" class="row">
-                <div style="flex:1"><label for="targetScore">Cíl pro výhru</label><input id="targetScore" type="number"
-                                                                                              value="4000" min="1"/></div>
-                <div style="width:120px"><label class="small">Min. hráči</label>
+                <div style="flex:1">
+                    <label for="targetScore">Cíl pro výhru</label>
+                    <input id="targetScore" type="number" value="4000" min="1"/>
+                </div>
+                <div style="width:120px">
+                    <label class="small">Min. hráči</label>
                     <div class="small" style="text-align:right;margin-top:6px">2+</div>
                 </div>
             </div>
-            <div style="margin-top:12px"><label>Hráči</label>
+            <div style="margin-top:12px">
+                <label>Hráči</label>
                 <div id="playersList" class="players-list"></div>
                 <div class="row" style="margin-top:8px">
                     <button id="addPlayerBtn" class="btn">Přidat hráče</button>
@@ -493,12 +473,14 @@
     <div id="page-game" style="display:none">
         <div class="game-interface">
             <div class="player-info">
-                <div id="playerName" class="player-name"></div>
+                <div id="miniStandings" class="mini-standings"></div>
+                <div id="playerName" class="player-name" title="Klikni pro přejmenování"></div>
                 <div class="score-area">
                     <div id="mainScore" class="main-score">0</div>
                     <div id="tempScore" class="temp-score">+0</div>
                 </div>
             </div>
+
             <div class="button-container">
                 <div class="score-buttons">
                     <button class="full-width-btn btn-score" data-val="50">+50</button>
@@ -506,17 +488,21 @@
                     <button class="full-width-btn btn-score" data-val="500">+500</button>
                     <button class="full-width-btn btn-score" data-val="1000">+1000</button>
                 </div>
+
                 <div class="action-buttons-3col">
                     <button id="endBtn" class="full-width-btn btn-end">Konec</button>
                     <button id="applyBtn" class="full-width-btn btn-apply">Zapsat</button>
                     <button id="undoBtn" class="full-width-btn btn-undo">Zpět</button>
                 </div>
+
                 <div class="nav-buttons">
                     <button id="prevBtn" class="btn-nav">Předchozí</button>
                     <button id="nextBtn" class="btn-nav">Další</button>
                 </div>
             </div>
         </div>
+
+        <!-- ponecháno (schované CSSem), aby zbytek kódu zůstal kompatibilní -->
         <div class="player-standings">
             <div class="standings-wrapper">
                 <h2 style="margin-bottom:12px; text-align:center;">Žebříček</h2>
@@ -550,6 +536,7 @@
     const targetScoreInput = document.getElementById('targetScore');
     const pageHome = document.getElementById('page-home');
     const pageGame = document.getElementById('page-game');
+    const miniStandingsEl = document.getElementById('miniStandings');
     const playerNameEl = document.getElementById('playerName');
     const mainScoreEl = document.getElementById('mainScore');
     const tempScoreEl = document.getElementById('tempScore');
@@ -570,6 +557,24 @@
     let finalRoundActive = false;
     let finalStarterIndex = null;
     let turnScores = [];
+
+    // drag state pro menu hráčů
+    const dragState = { active: false, id: null, pointerId: null };
+
+    function makeId() {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+        return String(Date.now()) + '_' + Math.random().toString(16).slice(2);
+    }
+
+    function newPlayer(name = '', score = 0) {
+        return { id: makeId(), name, score, temp: 0, tempHistory: [] };
+    }
+
+    function isDuplicateName(name, ignoreId = null) {
+        const n = name.trim().toLowerCase();
+        if (!n) return false;
+        return players.some(p => p.id !== ignoreId && (p.name || '').trim().toLowerCase() === n);
+    }
 
     // --- Logika pro historii (pouze lokální) ---
     function saveHistoryLocally(item) {
@@ -606,7 +611,7 @@
     // --- Zbytek logiky aplikace ---
     function saveOngoing() {
         const payload = {
-            players: players.map(p => ({name: p.name, score: p.score})),
+            players: players.map(p => ({ id: p.id, name: p.name, score: p.score })),
             currentIndex,
             target: Number(targetScoreInput.value || 4000),
             finalRoundActive,
@@ -621,11 +626,73 @@
         if (!raw) return null;
         try {
             const data = JSON.parse(raw);
-            data.players = data.players.map(p => ({...p, temp: 0, tempHistory: []}));
+            data.players = (data.players || []).map(p => ({
+                id: p.id || makeId(),
+                name: p.name,
+                score: p.score,
+                temp: 0,
+                tempHistory: []
+            }));
             return data;
         } catch (e) {
-            return null
+            return null;
         }
+    }
+
+    function startDragPlayer(playerId, e) {
+        dragState.active = true;
+        dragState.id = playerId;
+        dragState.pointerId = e.pointerId;
+
+        try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+        e.preventDefault();
+
+        document.addEventListener('pointermove', onDragMove, { passive: false });
+        document.addEventListener('pointerup', endDrag, { passive: false });
+
+        renderPlayers();
+    }
+
+    function onDragMove(e) {
+        if (!dragState.active) return;
+        e.preventDefault();
+
+        const y = e.clientY;
+        const rows = Array.from(playersListEl.querySelectorAll('.player-row'));
+        if (rows.length === 0) return;
+
+        let targetIndex = -1;
+        for (let i = 0; i < rows.length; i++) {
+            const rect = rows[i].getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            if (y < mid) { targetIndex = i; break; }
+        }
+        if (targetIndex === -1) targetIndex = rows.length - 1;
+
+        const fromIndex = players.findIndex(p => p.id === dragState.id);
+        if (fromIndex === -1) return;
+
+        if (targetIndex !== fromIndex) {
+            const moved = players.splice(fromIndex, 1)[0];
+            players.splice(targetIndex, 0, moved);
+            renderPlayers();
+            saveOngoing();
+        }
+    }
+
+    function endDrag(e) {
+        if (!dragState.active) return;
+        e.preventDefault();
+
+        dragState.active = false;
+        dragState.id = null;
+        dragState.pointerId = null;
+
+        document.removeEventListener('pointermove', onDragMove);
+        document.removeEventListener('pointerup', endDrag);
+
+        renderPlayers();
+        saveOngoing();
     }
 
     function renderPlayers() {
@@ -633,6 +700,9 @@
         players.forEach((p, i) => {
             const row = document.createElement('div');
             row.className = 'player-row';
+            row.dataset.id = p.id;
+            if (dragState.active && dragState.id === p.id) row.classList.add('dragging');
+
             const input = document.createElement('input');
             input.type = 'text';
             input.placeholder = 'Jméno hráče';
@@ -641,6 +711,7 @@
                 p.name = input.value;
                 saveOngoing();
             });
+
             const del = document.createElement('button');
             del.className = 'del-x';
             del.textContent = '✕';
@@ -650,8 +721,18 @@
                 renderPlayers();
                 saveOngoing();
             });
+
+            const handle = document.createElement('button');
+            handle.className = 'drag-handle';
+            handle.type = 'button';
+            handle.title = 'Přetáhni pro změnu pořadí';
+            handle.textContent = '≡';
+            handle.addEventListener('pointerdown', (e) => startDragPlayer(p.id, e));
+
             row.appendChild(input);
             row.appendChild(del);
+            row.appendChild(handle);
+
             playersListEl.appendChild(row);
         });
     }
@@ -699,9 +780,9 @@
     }
 
     clearHistoryBtn.addEventListener('click', clearHistory);
-    
+
     addPlayerBtn.addEventListener('click', () => {
-        players.push({name: '', score: 0, temp: 0, tempHistory: []});
+        players.push(newPlayer('', 0));
         renderPlayers();
         saveOngoing();
     });
@@ -710,13 +791,13 @@
         let isValid = true;
         const nameInputs = playersListEl.querySelectorAll('input');
         nameInputs.forEach(input => input.classList.remove('invalid-input'));
-        const names = players.map(p => p.name.trim().toLowerCase());
+
+        const names = players.map(p => (p.name || '').trim().toLowerCase());
         const nameCounts = {};
-        names.forEach(name => {
-            nameCounts[name] = (nameCounts[name] || 0) + 1;
-        });
+        names.forEach(name => { nameCounts[name] = (nameCounts[name] || 0) + 1; });
+
         nameInputs.forEach((input, i) => {
-            const name = players[i].name.trim();
+            const name = (players[i].name || '').trim();
             if (name === '') {
                 input.classList.add('invalid-input');
                 isValid = false;
@@ -727,20 +808,23 @@
             }
         });
         if (!isValid) return;
+
         if (players.length < 2) {
             alert('Přidej alespoň 2 hráče.');
             return;
         }
+
         players.forEach(p => {
             p.score = 0;
             p.temp = 0;
             p.tempHistory = [];
-            p.name = p.name.trim();
+            p.name = (p.name || '').trim();
         });
+
         currentIndex = 0;
         finalRoundActive = false;
         finalStarterIndex = null;
-        turnScores = players.map(p => null);
+        turnScores = players.map(() => null);
         localStorage.removeItem(GAME_KEY);
         applyBtn.disabled = false;
         showGame();
@@ -761,20 +845,80 @@
     }
 
     function computeRanks() {
-        const arr = players.map((p, i) => ({i, score: p.score})).sort((a, b) => b.score - a.score);
+        const arr = players.map((p, i) => ({ i, score: p.score })).sort((a, b) => b.score - a.score);
         const ranks = {};
         let pos = 1;
         for (let k = 0; k < arr.length;) {
             let j = k + 1;
             while (j < arr.length && arr[j].score === arr[k].score) j++;
             const label = (j - k === 1) ? String(pos) : `${pos}-${pos + (j - k) - 1}`;
-            for (let t = k; t < j; t++) {
-                ranks[arr[t].i] = label;
-            }
+            for (let t = k; t < j; t++) ranks[arr[t].i] = label;
             pos += (j - k);
             k = j;
         }
         return ranks;
+    }
+
+    function initialForName(name) {
+        const t = (name || '').trim();
+        if (!t) return '?';
+        return t[0].toUpperCase();
+    }
+
+    function renderMiniStandings() {
+        if (!miniStandingsEl) return;
+        miniStandingsEl.innerHTML = '';
+        if (players.length === 0) return;
+
+        // seřazení pro pořadí podle skóre
+        const sorted = players
+            .map((p, idx) => ({ p, idx }))
+            .sort((a, b) => b.p.score - a.p.score);
+
+        const maxScore = sorted[0].p.score;
+        const minScore = sorted[sorted.length - 1].p.score;
+
+        // ranking s ties (1,1,3...)
+        let pos = 1;
+        for (let k = 0; k < sorted.length;) {
+            let j = k + 1;
+            while (j < sorted.length && sorted[j].p.score === sorted[k].p.score) j++;
+
+            for (let t = k; t < j; t++) {
+                const originalIndex = sorted[t].idx;
+                const p = sorted[t].p;
+
+                const item = document.createElement('div');
+                item.className = 'mini-item';
+
+                if (originalIndex === currentIndex) item.classList.add('current');
+                else if (turnScores[originalIndex] !== null) item.classList.add('scored');
+
+                if (p.score === maxScore && players.filter(pl => pl.score === maxScore).length === 1) item.classList.add('gold');
+                else if (p.score === minScore && players.filter(pl => pl.score === minScore).length === 1 && maxScore !== minScore) item.classList.add('danger');
+
+                const r = document.createElement('span');
+                r.className = 'mini-rank';
+                r.textContent = '#' + pos;
+
+                const n = document.createElement('span');
+                n.className = 'mini-initial';
+                n.textContent = initialForName(p.name) + '.';
+
+                const s = document.createElement('span');
+                s.className = 'mini-score';
+                s.textContent = p.score;
+
+                item.appendChild(r);
+                item.appendChild(n);
+                item.appendChild(s);
+
+                miniStandingsEl.appendChild(item);
+            }
+
+            pos += (j - k);
+            k = j;
+        }
     }
 
     function renderPlayerCard() {
@@ -785,38 +929,51 @@
         playerNameEl.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="rank"> ${rankLabel}</span>`;
         mainScoreEl.textContent = p.score;
         tempScoreEl.textContent = '+' + (p.temp || 0);
+
         const maxScore = Math.max(...players.map(x => x.score));
         const minScore = Math.min(...players.map(x => x.score));
         playerNameEl.classList.remove('first-place', 'last-place');
+
         if (p.score === maxScore && players.filter(x => x.score === maxScore).length === 1 && players.length > 1) {
             playerNameEl.classList.add('first-place');
         }
         if (p.score === minScore && players.filter(x => x.score === minScore).length === 1 && players.length > 1 && maxScore !== minScore) {
             playerNameEl.classList.add('last-place');
         }
+
         const target = Number(targetScoreInput.value) || 4000;
         gameInterfaceEl.classList.toggle('is-winner-card', p.score >= target);
     }
 
     function renderStandings() {
+        // Mini žebříček nahoře
+        renderMiniStandings();
+
+        // Původní (vertikální) žebříček nechán kompatibilně, ale je schovaný CSSem
         standingsListEl.innerHTML = '';
         if (players.length === 0) return;
-        const sortedPlayers = players.map((p, index) => ({...p, originalIndex: index})).sort((a, b) => b.score - a.score);
+
+        const sortedPlayers = players
+            .map((p, index) => ({ ...p, originalIndex: index }))
+            .sort((a, b) => b.score - a.score);
+
         const maxScore = sortedPlayers[0].score;
         const minScore = sortedPlayers[sortedPlayers.length - 1].score;
+
         sortedPlayers.forEach((p, rank) => {
             const row = document.createElement('div');
             row.className = 'standings-row';
             row.classList.remove('current-player-row', 'player-scored-row');
-            if (p.originalIndex === currentIndex) {
-                row.classList.add('current-player-row');
-            } else if (turnScores[p.originalIndex] !== null) {
-                row.classList.add('player-scored-row');
-            }
+
+            if (p.originalIndex === currentIndex) row.classList.add('current-player-row');
+            else if (turnScores[p.originalIndex] !== null) row.classList.add('player-scored-row');
+
             const info = document.createElement('div');
             info.className = 'standings-info';
+
             let rankHtml = `#${rank + 1} `;
             let nameHtml = escapeHtml(p.name);
+
             if (p.score === maxScore && players.filter(pl => pl.score === maxScore).length === 1) {
                 rankHtml = `<span class="gold-text">${rankHtml}</span>`;
                 nameHtml = `<span class="gold-text">${nameHtml}</span>`;
@@ -824,32 +981,56 @@
                 rankHtml = `<span class="danger-text">${rankHtml}</span>`;
                 nameHtml = `<span class="danger-text">${nameHtml}</span>`;
             }
+
             info.innerHTML = rankHtml + nameHtml;
+
             const score = document.createElement('div');
             score.className = 'standings-score';
             score.textContent = p.score;
+
             row.appendChild(info);
             row.appendChild(score);
             standingsListEl.appendChild(row);
         });
     }
 
-    mainScoreEl.addEventListener('click', () => {
-      const p = players[currentIndex];
-      const newScore = prompt(`Zadejte nové skóre pro ${p.name}:`, p.score);
-      if (newScore !== null) {
-        const parsedScore = parseInt(newScore, 10);
-        if (!isNaN(parsedScore)) {
-          p.score = parsedScore;
-          p.temp = 0;
-          p.tempHistory = [];
-          renderPlayerCard();
-          renderStandings();
-          saveOngoing();
-        } else {
-          alert('Zadána neplatná hodnota. Zadejte prosím číslo.');
+    // Klik na jméno hráče = přejmenování (stejně jako skóre)
+    playerNameEl.addEventListener('click', () => {
+        const p = players[currentIndex];
+        const newName = prompt(`Přejmenovat hráče ${p.name}:`, p.name);
+        if (newName === null) return;
+
+        const cleaned = newName.trim();
+        if (!cleaned) {
+            alert('Jméno nesmí být prázdné.');
+            return;
         }
-      }
+        if (isDuplicateName(cleaned, p.id)) {
+            alert('Tohle jméno už existuje. Zvol jiné.');
+            return;
+        }
+        p.name = cleaned;
+        renderPlayerCard();
+        renderStandings();
+        saveOngoing();
+    });
+
+    mainScoreEl.addEventListener('click', () => {
+        const p = players[currentIndex];
+        const newScore = prompt(`Zadejte nové skóre pro ${p.name}:`, p.score);
+        if (newScore !== null) {
+            const parsedScore = parseInt(newScore, 10);
+            if (!isNaN(parsedScore)) {
+                p.score = parsedScore;
+                p.temp = 0;
+                p.tempHistory = [];
+                renderPlayerCard();
+                renderStandings();
+                saveOngoing();
+            } else {
+                alert('Zadána neplatná hodnota. Zadejte prosím číslo.');
+            }
+        }
     });
 
     document.querySelectorAll('.btn-score').forEach(b => {
@@ -882,18 +1063,22 @@
         turnScores[currentIndex] = p.score;
         p.temp = 0;
         p.tempHistory = [];
-        mainScoreEl.animate([{transform: 'scale(1)'}, {transform: 'scale(1.08)'}, {transform: 'scale(1)'}], {
+
+        mainScoreEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], {
             duration: 320,
             iterations: 1
         });
+
         renderPlayerCard();
         renderStandings();
+
         setTimeout(() => {
             const target = Number(targetScoreInput.value) || 4000;
             if (p.score >= target && !finalRoundActive) {
                 finalRoundActive = true;
                 finalStarterIndex = currentIndex;
             }
+
             if (finalRoundActive) {
                 const isLastTurn = currentIndex === players.length - 1;
                 if (isLastTurn) {
@@ -901,18 +1086,18 @@
                     return;
                 }
             }
+
             let nextIndex = (currentIndex + 1) % players.length;
             let fullRound = true;
             for (let i = 0; i < players.length; i++) {
-                if (turnScores[i] === null) {
-                    fullRound = false;
-                    break;
-                }
+                if (turnScores[i] === null) { fullRound = false; break; }
             }
+
             if (fullRound) {
-                turnScores = players.map(p => null);
+                turnScores = players.map(() => null);
                 nextIndex = (currentIndex + 1) % players.length;
             }
+
             currentIndex = nextIndex;
             renderPlayerCard();
             renderStandings();
@@ -924,16 +1109,14 @@
     endBtn.addEventListener('click', endGameByStandings);
 
     prevBtn.addEventListener('click', () => {
-        let prevIndex = (currentIndex - 1 + players.length) % players.length;
-        currentIndex = prevIndex;
+        currentIndex = (currentIndex - 1 + players.length) % players.length;
         renderPlayerCard();
         renderStandings();
         saveOngoing();
     });
 
     nextBtn.addEventListener('click', () => {
-        let nextIndex = (currentIndex + 1) % players.length;
-        currentIndex = nextIndex;
+        currentIndex = (currentIndex + 1) % players.length;
         renderPlayerCard();
         renderStandings();
         saveOngoing();
@@ -944,9 +1127,12 @@
             name: p.name || 'Hráč',
             score: Number(p.score || 0)
         })).sort((a, b) => b.score - a.score);
+
         const target = Number(targetScoreInput.value) || 4000;
         const winners = standings.filter(p => p.score >= target);
-        await saveHistory({when: new Date().toISOString(), players: standings, winners: winners.map(w => w.name)});
+
+        await saveHistory({ when: new Date().toISOString(), players: standings, winners: winners.map(w => w.name) });
+
         localStorage.removeItem(GAME_KEY);
         finalRoundActive = false;
         finalStarterIndex = null;
@@ -958,13 +1144,17 @@
         placementsEl.innerHTML = '';
         const target = Number(targetScoreInput.value) || 4000;
         const minScore = standings.length > 0 ? standings[standings.length - 1].score : 0;
+
         standings.forEach((s, i) => {
             const d = document.createElement('div');
             d.className = 'placement';
+
             const name = document.createElement('div');
             name.className = 'name';
+
             const score = document.createElement('div');
             score.textContent = s.score;
+
             let nameHtml = `#${i + 1} ${escapeHtml(s.name)}`;
             if (s.score >= target) {
                 name.innerHTML = `<span class="winner-text">${nameHtml}</span>`;
@@ -973,10 +1163,12 @@
             } else {
                 name.innerHTML = nameHtml;
             }
+
             d.appendChild(name);
             d.appendChild(score);
             placementsEl.appendChild(d);
         });
+
         const winners = standings.filter(p => p.score >= target);
         if (winners.length > 1) {
             endTitle.textContent = `Vítězové: ${winners.map(w => w.name).join(', ')}`;
@@ -985,6 +1177,7 @@
         } else {
             endTitle.textContent = `Hra skončila bez vítěze`;
         }
+
         endModal.style.display = 'block';
     }
 
@@ -1016,6 +1209,7 @@
         if (ongoing && ongoing.players && ongoing.players.length >= 2) {
             if (confirm('Načíst rozdělanou hru?')) {
                 players = ongoing.players.map(p => ({
+                    id: p.id || makeId(),
                     name: p.name || '',
                     score: Number(p.score || 0),
                     temp: 0,
@@ -1025,7 +1219,7 @@
                 targetScoreInput.value = ongoing.target || 4000;
                 finalRoundActive = ongoing.finalRoundActive || false;
                 finalStarterIndex = ongoing.finalStarterIndex !== null ? ongoing.finalStarterIndex : null;
-                turnScores = ongoing.turnScores || players.map(p => null);
+                turnScores = ongoing.turnScores || players.map(() => null);
                 renderPlayers();
                 showGame();
                 return;
@@ -1033,15 +1227,15 @@
                 localStorage.removeItem(GAME_KEY);
             }
         }
+
         if (players.length === 0) {
-            players = [{name: '', score: 0, temp: 0, tempHistory: []}, {
-                name: '',
-                score: 0,
-                temp: 0,
-                tempHistory: []
-            }];
+            players = [newPlayer('', 0), newPlayer('', 0)];
+        } else {
+            // kdyby někdo měl staré položky bez id
+            players = players.map(p => ({ ...p, id: p.id || makeId() }));
         }
-        turnScores = players.map(p => null);
+
+        turnScores = players.map(() => null);
         renderPlayers();
         await renderHistory();
     })();
